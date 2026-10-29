@@ -37,7 +37,7 @@ h2{margin:0 0 18px}.muted{color:var(--muted)}
 .reel{height:140px;overflow:hidden;position:relative;border:1px solid #514276;border-radius:12px;background:#080b12;margin:24px 0}
 .reel:after{content:"";position:absolute;left:50%;top:0;bottom:0;width:3px;background:#ffd477}
 .track{display:flex;gap:8px;width:max-content;padding:8px;height:100%}
-.reelitem{width:105px;flex-shrink:0;background:#171d2b;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;font-size:34px}
+.reelitem{width:105px;flex-shrink:0;background:#171d2b;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;font-size:34px;position:relative}.reelitem small{font-size:10px;color:var(--muted);max-width:94px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reelitem.winner{border-color:#ffd477;box-shadow:0 0 18px #ffd47766}.chartbox{background:#0b0e18;border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:12px}.chart{width:100%;height:220px;display:block}.statrow{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.stat{background:#0b0e18;border:1px solid var(--line);padding:12px;border-radius:12px;min-width:120px}.up{color:#65e4aa}.down{color:#ff8a9a}.itemclick{margin-top:8px;background:#20283a;width:100%}
 table{border-collapse:collapse;width:100%;min-width:570px}
 td,th{text-align:left;padding:12px;border-bottom:1px solid var(--line)}
 th{color:var(--muted)}
@@ -63,6 +63,7 @@ let cases = [];
 let inventory = [];
 let page = "cases";
 let spinning = false;
+let spinTimer = null;
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, c => ({
@@ -198,7 +199,7 @@ function header() {
       <div class="logo">DROP<span>ZONE</span></div>
       <nav>
         <button data-page="cases">Кейсы</button>
-        <button data-page="market">Маркет</button>
+        <button data-page="growth">Рост цен</button>
         <button data-page="inventory">Инвентарь</button>
         ${profile?.role === "admin" ? '<button data-page="admin">Админка</button>' : ""}
       </nav>
@@ -212,14 +213,45 @@ function header() {
 function itemCard(item, owned = false) {
   return `
     <article class="card">
-      <div class="art">${esc(item.icon)}</div>
+      <div class="art">${esc(item.icon || "💎")}</div>
       <h3>${esc(item.name)}</h3>
-      <p>${esc(item.rarity)} · виртуальный предмет</p>
+      <p>${esc(item.rarity || "collectible")} · виртуальный предмет</p>
       <div class="price">${money(item.price)}</div>
       ${owned
         ? `<button data-sell="${esc(item.inventoryId)}">Продать за ${money(Math.floor(item.price * .6))}</button>`
-        : `<button data-buy="${esc(item.id)}">Купить</button>`}
+        : ""}
+      <button class="itemclick" data-detail="${esc(item.id)}">Посмотреть рост цены</button>
     </article>`;
+}
+function historyFor(item) {
+  const history = Array.isArray(item.priceHistory) ? item.priceHistory : [];
+  if (history.length >= 2) return history.slice(-24);
+  const startingPrice = history.length ? Number(history[0].price) || item.price : item.price;
+  return [{ price: startingPrice, at: Date.now() - 60000 }, { price: startingPrice, at: Date.now() }];
+}
+function growthChart(item) {
+  const history = historyFor(item);
+  const values = history.map(point => Number(point.price) || 0);
+  const min = Math.min(...values), max = Math.max(...values);
+  const span = Math.max(1, max - min);
+  const points = values.map((value, i) => `${12 + (i / Math.max(1, values.length - 1)) * 376},${190 - ((value - min) / span) * 160}`).join(" ");
+  const first = values[0] || item.price, last = values[values.length - 1] || item.price;
+  const change = first ? ((last - first) / first) * 100 : 0;
+  return `<div class="chartbox">
+    <div class="statrow"><div class="stat"><div class="muted">Текущая цена</div><strong>${money(item.price)}</strong></div><div class="stat"><div class="muted">Изменение за историю</div><strong class="${change >= 0 ? "up" : "down"}">${change >= 0 ? "+" : ""}${change.toFixed(2)}%</strong></div><div class="stat"><div class="muted">Записей цены</div><strong>${history.length}</strong></div></div>
+    <svg class="chart" viewBox="0 0 400 210" preserveAspectRatio="none" role="img" aria-label="График цены ${esc(item.name)}">
+      <path d="M12 30H388 M12 80H388 M12 130H388 M12 190H388" stroke="#293149" stroke-width="1" fill="none" />
+      <polyline points="${points}" fill="none" stroke="${change >= 0 ? "#65e4aa" : "#ff8a9a"}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+    </svg>
+    <p class="muted">Цена меняется автоматически со временем. График показывает сохранённые значения.</p>
+  </div>`;
+}
+function growthPage(selectedId = "") {
+  const selected = items.find(item => item.id === selectedId) || items[0];
+  if (!items.length) return `<h2>Рост цен</h2><p class="muted">Пока нет предметов для отслеживания.</p>`;
+  return `<h2>Рост цен предметов</h2><p class="muted">Выбери предмет, чтобы посмотреть динамику стоимости.</p>
+    <div class="grid">${items.map(item => `<article class="card"><div class="art">${esc(item.icon || "💎")}</div><h3>${esc(item.name)}</h3><div class="price">${money(item.price)}</div><button data-growth="${esc(item.id)}">Открыть график</button></article>`).join("")}</div>
+    <section class="box" style="margin-top:20px"><div class="row"><div class="art" style="width:90px;height:90px;margin:0">${esc(selected.icon || "💎")}</div><div><h2 style="margin:0">${esc(selected.name)}</h2><p class="muted">${esc(selected.rarity || "collectible")}</p></div></div>${growthChart(selected)}</section>`;
 }
 function caseCard(c) {
   return `
@@ -243,10 +275,8 @@ function render() {
       ${cases.map(caseCard).join("") || "Кейсов пока нет"}
     </div>`;
   }
-  if (page === "market") {
-    content = `<h2>Маркет</h2><div class="grid">
-      ${items.map(item => itemCard(item)).join("") || "Предметов пока нет"}
-    </div>`;
+  if (page === "growth") {
+    content = growthPage();
   }
   if (page === "inventory") {
     content = `<h2>Мой инвентарь</h2><div class="grid">
@@ -279,6 +309,12 @@ function render() {
   app.querySelectorAll("[data-sell]").forEach(button => {
     button.onclick = () => sellItem(button.dataset.sell);
   });
+  app.querySelectorAll("[data-detail]").forEach(button => {
+    button.onclick = () => { page = "growth"; render(); showGrowthItem(button.dataset.detail); };
+  });
+  app.querySelectorAll("[data-growth]").forEach(button => {
+    button.onclick = () => showGrowthItem(button.dataset.growth);
+  });
   wireAdmin();
 }
 async function buyItem(id) {
@@ -298,44 +334,62 @@ async function openCase(id) {
   spinning = true;
   try {
     const result = await api("open_case", { case_id: id });
-    await refresh();
     const winner = result.item;
-    const reel = Array.from({ length: 32 }, (_, i) =>
-      items[i % Math.max(1, items.length)]).filter(Boolean);
-    reel[27] = winner;
+    if (!winner || !winner.id) throw new Error("Сервер не вернул выпавший предмет");
+    await refresh();
+    const pool = items.filter(item => item && item.id);
+    if (!pool.length) throw new Error("Нет предметов для рулетки");
+    const reel = Array.from({ length: 41 }, () => pool[Math.floor(Math.random() * pool.length)]);
+    const winnerIndex = 32;
+    reel[winnerIndex] = items.find(item => item.id === winner.id) || winner;
     modal.classList.remove("hidden");
     modal.innerHTML = `
       <div class="modalbox">
         <div class="muted">OPENING CASE</div>
         <h2>Твой дроп</h2>
-        <div class="reel"><div class="track" id="track">
-          ${reel.map(item => `<div class="reelitem">${esc(item.icon)}</div>`).join("")}
+        <div class="reel" id="reel"><div class="track" id="track">
+          ${reel.map((item, index) => `<div class="reelitem ${index === winnerIndex ? "winner" : ""}" ${index === winnerIndex ? 'id="reelWinner"' : ""}><span>${esc(item.icon || "💎")}</span><small>${esc(item.name || "Предмет")}</small></div>`).join("")}
         </div></div>
         <h2 id="win" class="hidden">${esc(winner.name)}</h2>
         <p id="winPrice" class="price hidden">${money(winner.price)}</p>
         <button id="claim" class="hidden">Забрать предмет</button>
       </div>`;
     const track = document.querySelector("#track");
+    const reelBox = document.querySelector("#reel");
+    const winnerTile = document.querySelector("#reelWinner");
     requestAnimationFrame(() => {
-      track.style.transition = "transform 4.5s cubic-bezier(.08,.72,.08,1)";
-      track.style.transform = `translateX(-${27 * 113 - 110}px)`;
+      const target = winnerTile.offsetLeft + winnerTile.offsetWidth / 2 - reelBox.clientWidth / 2;
+      track.style.transition = "none";
+      track.style.transform = "translateX(0)";
+      void track.offsetWidth;
+      track.style.transition = "transform 5s cubic-bezier(.08,.72,.08,1)";
+      track.style.transform = `translateX(-${Math.max(0, target)}px)`;
     });
-    setTimeout(() => {
+    clearTimeout(spinTimer);
+    spinTimer = setTimeout(() => {
       document.querySelector("#win")?.classList.remove("hidden");
       document.querySelector("#winPrice")?.classList.remove("hidden");
       const claim = document.querySelector("#claim");
       if (!claim) return;
       claim.classList.remove("hidden");
-      claim.onclick = () => {
+      claim.onclick = async () => {
         modal.classList.add("hidden");
-        spinning = false;
-        page = "inventory";
-        render();
+        clearTimeout(spinTimer);
+        try {
+          await refresh();
+          page = "inventory";
+          render();
+          msg("предмет добавлен в инвентарь");
+        } catch (error) {
+          msg(error.message || "Не удалось обновить инвентарь");
+        } finally {
+          spinning = false;
+        }
       };
-    }, 4700);
+    }, 5200);
   } catch (e) {
     spinning = false;
-    msg(e.message);
+    msg(e.message || "Не удалось открыть кейс");
   }
 }
 function adminPage() {
@@ -406,22 +460,14 @@ function wireAdmin() {
   document.querySelectorAll("[data-delete-item]").forEach(b => b.onclick = async () => {
     if (!confirm("Удалить предмет?")) return;
     try {
-      const item = items.find(entry => entry.id === b.dataset.deleteItem);
-      await api("admin_delete_item", {
-        id: b.dataset.deleteItem,
-        name: item?.name || ""
-      });
+      await api("admin_delete_item", { id: b.dataset.deleteItem });
       await refresh(); render(); msg("предмет удалён у всех");
     } catch (e) { msg(e.message); }
   });
   document.querySelectorAll("[data-delete-case]").forEach(b => b.onclick = async () => {
     if (!confirm("Удалить кейс у всех пользователей?")) return;
     try {
-      const caseData = cases.find(entry => entry.id === b.dataset.deleteCase);
-      await api("admin_delete_case", {
-        id: b.dataset.deleteCase,
-        name: caseData?.name || ""
-      });
+      await api("admin_delete_case", { id: b.dataset.deleteCase });
       await refresh(); render(); msg("кейс удалён у всех");
     } catch (e) { msg(e.message); }
   });
