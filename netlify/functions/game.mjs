@@ -159,12 +159,24 @@ function validPrice(value) {
 }
 
 function weightedItem(db, caseData) {
-  // Результат фиксированный: барабан — только визуальная анимация, без случайного выигрыша.
   const available = caseData.drops
-    .filter(drop => db.items.some(item => item.id === drop.itemId))
-    .map(drop => db.items.find(item => item.id === drop.itemId))
-    .filter(Boolean);
-  return available[0] || null;
+    .filter(drop =>
+      db.items.some(item => item.id === drop.itemId) &&
+      Number.isFinite(drop.weight) &&
+      drop.weight > 0
+    );
+
+  const total = available.reduce((sum, drop) => sum + drop.weight, 0);
+  if (!total) return null;
+
+  let roll = crypto.randomInt(0, 1000000000) / 1000000000 * total;
+
+  for (const drop of available) {
+    roll -= drop.weight;
+    if (roll < 0) return db.items.find(item => item.id === drop.itemId);
+  }
+
+  return db.items.find(item => item.id === available[available.length - 1].itemId);
 }
 
 function defaultDatabase() {
@@ -430,10 +442,12 @@ export default async function handler(request) {
     }
 
     if (action === "reset-accounts") {
+      // Keep cases and items intact; remove only user accounts and transaction history.
+      const removedUsers = db.users.length;
       db.users = [];
       db.transactions = [];
       await writeDatabase(store, db);
-      return json({ ok: true, message: "Аккаунты сброшены. Кейсы и предметы сохранены." });
+      return json({ ok: true, removedUsers, message: "Аккаунты сброшены. Кейсы и предметы сохранены." });
     }
 
     if (action === "update-item") {
