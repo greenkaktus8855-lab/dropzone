@@ -1,580 +1,498 @@
 
-import { getStore } from "@netlify/blobs";
-import crypto from "node:crypto";
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DROPZONE — NFT Simulator</title>
+<style>
+:root{color-scheme:dark;--bg:#090b12;--panel:#131827;--line:#293149;--purple:#9364ff;--blue:#637eff;--green:#65e4aa;--muted:#9ba6bf}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#241443,var(--bg) 50%);color:#f5f6ff;font-family:Arial,sans-serif;min-height:100vh}
+button,input,select{font:inherit}
+button{cursor:pointer;border:0;border-radius:10px;padding:12px 15px;background:linear-gradient(110deg,var(--purple),var(--blue));color:white;font-weight:bold}
+button:disabled{opacity:.5}
+input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b0f19;color:white}
+header{position:sticky;top:0;background:#0a0c14f2;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);z-index:3}
+.bar{max-width:1150px;margin:auto;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{font-weight:1000;font-size:24px}.logo span{color:var(--purple)}
+nav{display:flex;gap:7px;flex-wrap:wrap}
+nav button,.secondary{background:#1a2030;border:1px solid var(--line)}
+main{max-width:1150px;margin:auto;padding:24px 16px 60px}
+.hero,.card,.box{background:linear-gradient(145deg,#171d2d,#101420);border:1px solid var(--line);border-radius:18px;padding:22px}
+.hero{padding:34px;margin-bottom:25px;background:linear-gradient(120deg,#271644,#14213a)}
+h1{font-size:clamp(30px,5vw,48px);margin:10px 0}
+h2{margin:0 0 18px}.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}
+.art{height:130px;display:grid;place-items:center;background:#0b0e18;border:1px solid var(--line);border-radius:13px;font-size:58px;margin-bottom:15px}
+.price{color:var(--green);font-weight:bold}
+.card h3{margin:8px 0}.card p{color:var(--muted);min-height:35px;font-size:14px;line-height:1.5}
+.card button{width:100%;margin-top:12px}
+.section{margin:27px 0 16px}
+.auth{max-width:430px;margin:7vh auto;padding:25px}
+.field{display:grid;gap:7px;margin:14px 0}
+#message{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#25213b;border:1px solid #514276;border-radius:12px;padding:13px 18px;display:none;z-index:10;max-width:90%;text-align:center}
+#modal{position:fixed;inset:0;background:#05070ded;z-index:5;display:grid;place-items:center;padding:15px}
+.modalbox{width:min(800px,100%);background:#141927;border:1px solid #514276;border-radius:20px;padding:25px;text-align:center}
+.reel{height:140px;width:100%;max-width:750px;margin:24px auto;overflow:hidden;position:relative;border:1px solid #514276;border-radius:12px;background:#080b12}
+.reel:after{content:"";position:absolute;left:50%;top:0;bottom:0;width:3px;background:#ffd477}
+.track{display:flex;gap:8px;width:max-content;padding:8px;height:100%;will-change:transform}
+.reelitem{width:105px;flex-shrink:0;background:#171d2b;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;font-size:34px}
+table{border-collapse:collapse;width:100%;min-width:570px}
+td,th{text-align:left;padding:12px;border-bottom:1px solid var(--line)}
+th{color:var(--muted)}
+.tablewrap{overflow:auto}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row input{max-width:150px}
+.hidden{display:none!important}
+@media(max-width:600px){.bar{align-items:flex-start}.hero{padding:23px}.auth{margin:20px auto}}
+</style>
+</head>
+<body>
+<div id="app">
+  <main>
+    <section class="box auth">
+      <div class="logo">DROP<span>ZONE</span></div>
+      <p class="muted">Виртуальные предметы и кейсы</p>
+      <form id="authFormFallback" onsubmit="return false">
+        <div class="field"><label>Имя пользователя</label><input name="username" minlength="3" maxlength="20" autocomplete="username" placeholder="например kaktus"></div>
+        <div class="field"><label>Пароль</label><input name="password" type="password" required minlength="8" maxlength="100" autocomplete="current-password" placeholder="не менее 8 символов"></div>
+        <div class="row"><button type="button" onclick="location.reload()">Перезагрузить сайт</button></div>
+      </form>
+      <p class="muted">Если эта заглушка осталась на экране, JavaScript сайта не запустился. Перезагрузи страницу после публикации обновления.</p>
+    </section>
+  </main>
+</div>
+<div id="message"></div>
+<div id="modal" class="hidden"></div>
 
-const STORE_NAME = "dropzone-game";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const SESSION_SECRET = process.env.SESSION_SECRET;
+<script>
+const app = document.querySelector("#app");
+const modal = document.querySelector("#modal");
+let user = null;
+let profile = null;
+let items = [];
+let cases = [];
+let inventory = [];
+let page = "cases";
+let spinning = false;
 
-const DEFAULT_ITEMS = [
-  { id: "sticker", name: "GG Sticker", icon: "🎯", rarity: "common", price: 120 },
-  { id: "gloves", name: "Cyber Gloves", icon: "🧤", rarity: "uncommon", price: 650 },
-  { id: "katana", name: "Neon Katana", icon: "⚔️", rarity: "rare", price: 2400 },
-  { id: "mask", name: "Golden Mask", icon: "🎭", rarity: "epic", price: 8900 },
-  { id: "dragon", name: "Void Dragon", icon: "🐉", rarity: "legendary", price: 28000 },
-  { id: "crown", name: "Cosmic Crown", icon: "👑", rarity: "legendary", price: 85000 }
-];
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+function money(value) {
+  return Math.floor(Number(value) || 0).toLocaleString("ru-RU") + " ₵";
+}
+function msg(text) {
+  const el = document.querySelector("#message");
+  el.textContent = text;
+  el.style.display = "block";
+  clearTimeout(msg.timer);
+  msg.timer = setTimeout(() => el.style.display = "none", 3000);
+}
 
-const DEFAULT_CASES = [
-  {
-    id: "starter",
-    name: "Starter Case",
-    icon: "📦",
-    desc: "Первый дроп для новичков",
-    price: 100,
-    drops: [
-      { itemId: "sticker", weight: 64 },
-      { itemId: "gloves", weight: 25 },
-      { itemId: "katana", weight: 9 },
-      { itemId: "mask", weight: 1.7 },
-      { itemId: "dragon", weight: 0.28 },
-      { itemId: "crown", weight: 0.02 }
-    ]
-  },
-  {
-    id: "neon",
-    name: "Neon Case",
-    icon: "💎",
-    desc: "Больше редких предметов",
-    price: 700,
-    drops: [
-      { itemId: "sticker", weight: 20 },
-      { itemId: "gloves", weight: 43 },
-      { itemId: "katana", weight: 27 },
-      { itemId: "mask", weight: 8.5 },
-      { itemId: "dragon", weight: 1.45 },
-      { itemId: "crown", weight: 0.05 }
-    ]
-  },
-  {
-    id: "mythic",
-    name: "Mythic Case",
-    icon: "🌌",
-    desc: "Редкие коллекционные предметы",
-    price: 2500,
-    drops: [
-      { itemId: "gloves", weight: 12 },
-      { itemId: "katana", weight: 48 },
-      { itemId: "mask", weight: 29 },
-      { itemId: "dragon", weight: 10 },
-      { itemId: "crown", weight: 1 }
-    ]
+/* Все запросы идут в Netlify Function. Авторизация хранится в HttpOnly cookie. */
+async function api(action, data = {}) {
+  const actionMap = {
+    open_case: "open-case",
+    buy_item: "buy-item",
+    sell_item: "sell-item",
+    admin_create_item: "create-item",
+    admin_create_case: "create-case",
+    admin_delete_item: "delete-item",
+    admin_delete_case: "delete-case",
+    admin_update_item: "update-item",
+    admin_update_case: "update-case"
+  };
+  const keyMap = {
+    case_id: "caseId",
+    item_id: "itemId",
+    inventory_id: "index",
+    description: "desc"
+  };
+  const payload = {};
+  for (const [key, value] of Object.entries(data)) {
+    payload[keyMap[key] || key] = value;
   }
-];
+  const serverAction = actionMap[action] || action;
+  const method = action === "state" ? "GET" : "POST";
+  const response = await fetch(
+    `/.netlify/functions/game?action=${encodeURIComponent(serverAction)}`,
+    {
+      method,
+      credentials: "same-origin",
+      headers: method === "POST" ? { "Content-Type": "application/json" } : {},
+      ...(method === "POST" ? { body: JSON.stringify(payload) } : {})
+    }
+  );
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Ошибка сервера");
+  return body;
+}
 
-function json(data, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-      ...extraHeaders
+async function refresh() {
+  const state = await api("state");
+  items = Array.isArray(state.items) ? state.items : [];
+  cases = Array.isArray(state.cases) ? state.cases : [];
+  user = state.user || (state.isAdmin ? { username: "admin", balance: 0, inventory: [] } : null);
+  profile = user ? {
+    username: user.username,
+    balance: Number(user.balance) || 0,
+    role: state.isAdmin ? "admin" : "user"
+  } : null;
+  inventory = user && Array.isArray(user.inventory)
+    ? user.inventory.map((itemId, index) => ({
+        id: String(index),
+        items: items.find(item => item.id === itemId) || null
+      })).filter(entry => entry.items)
+    : [];
+}
+
+function authScreen() {
+  app.innerHTML = `
+    <main>
+      <section class="box auth">
+        <div class="logo">DROP<span>ZONE</span></div>
+        <p class="muted">Виртуальные предметы и кейсы</p>
+        <form id="authForm">
+          <div class="field">
+            <label>Имя пользователя</label>
+            <input name="username" minlength="3" maxlength="20"
+              pattern="[a-zA-Z0-9_-]+" autocomplete="username">
+          </div>
+          <div class="field">
+            <label>Пароль</label>
+            <input name="password" type="password" required minlength="8"
+              maxlength="100" autocomplete="current-password">
+          </div>
+          <div class="row">
+            <button type="submit" data-mode="login">Войти</button>
+            <button type="submit" data-mode="register" class="secondary">Регистрация</button>
+            <button type="submit" data-mode="admin" class="secondary">Админ</button>
+          </div>
+        </form>
+        <p class="muted">Для аккаунта используй отдельный пароль, не от личной почты.</p>
+      </section>
+    </main>`;
+
+  document.querySelector("#authForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const mode = e.submitter?.dataset.mode || "login";
+    const form = new FormData(e.currentTarget);
+    const username = String(form.get("username") || "").trim();
+    const password = String(form.get("password") || "");
+    if (mode !== "admin" && !/^[a-zA-Z0-9_-]{3,20}$/.test(username)) {
+      msg("имя пользователя: 3–20 символов, только латиница, цифры, _ или -");
+      return;
+    }
+    try {
+      if (mode === "register") {
+        await api("register", { username, password });
+        await boot();
+        msg("аккаунт создан");
+      } else if (mode === "login") {
+        await api("login", { username, password });
+        await boot();
+      } else {
+        await api("admin-login", { password });
+        await boot();
+      }
+    } catch (error) {
+      msg(error.message || "Не удалось выполнить запрос");
     }
   });
 }
 
-function randomId(prefix = "id") {
-  return `${prefix}_${crypto.randomUUID()}`;
+function header() {
+  return `
+    <header><div class="bar">
+      <div class="logo">DROP<span>ZONE</span></div>
+      <nav>
+        <button data-page="cases">Кейсы</button>
+        <button data-page="market">Маркет</button>
+        <button data-page="inventory">Инвентарь</button>
+        ${profile?.role === "admin" ? '<button data-page="admin">Админка</button>' : ""}
+      </nav>
+      <div class="row">
+        <strong class="price">${profile ? money(profile.balance) : ""}</strong>
+        <button class="secondary" id="logout">Выход</button>
+      </div>
+    </div></header>`;
 }
 
-function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
-  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${hash}`;
+function itemCard(item, owned = false) {
+  return `
+    <article class="card">
+      <div class="art">${esc(item.icon)}</div>
+      <h3>${esc(item.name)}</h3>
+      <p>${esc(item.rarity)} · виртуальный предмет</p>
+      <div class="price">${money(item.price)}</div>
+      ${owned
+        ? `<button data-sell="${esc(item.inventoryId)}">Продать за ${money(Math.floor(item.price * .6))}</button>`
+        : `<button data-buy="${esc(item.id)}">Купить</button>`}
+    </article>`;
 }
-
-function verifyPassword(password, stored) {
-  if (typeof stored !== "string" || !stored.includes(":")) return false;
-
-  const [salt, expectedHex] = stored.split(":");
-  const actual = crypto.scryptSync(password, salt, 64);
-  const expected = Buffer.from(expectedHex, "hex");
-
-  return expected.length === actual.length &&
-    crypto.timingSafeEqual(actual, expected);
+function caseCard(c) {
+  return `
+    <article class="card">
+      <div class="art">${esc(c.icon || "📦")}</div>
+      <h3>${esc(c.name)}</h3>
+      <p>${esc(c.desc || c.description || "Коллекционный кейс")}</p>
+      <div class="price">${money(c.price)}</div>
+      <button data-open="${esc(c.id)}">Открыть кейс</button>
+    </article>`;
 }
-
-function sign(payload) {
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = crypto
-    .createHmac("sha256", SESSION_SECRET)
-    .update(body)
-    .digest("base64url");
-
-  return `${body}.${signature}`;
-}
-
-function verifyToken(token) {
-  try {
-    const [body, signature] = String(token || "").split(".");
-    if (!body || !signature) return null;
-
-    const expected = crypto
-      .createHmac("sha256", SESSION_SECRET)
-      .update(body)
-      .digest();
-
-    const actual = Buffer.from(signature, "base64url");
-    if (actual.length !== expected.length ||
-        !crypto.timingSafeEqual(actual, expected)) return null;
-
-    const payload = JSON.parse(
-      Buffer.from(body, "base64url").toString("utf8")
-    );
-
-    if (!payload.exp || payload.exp < Date.now()) return null;
-    return payload;
-  } catch {
-    return null;
+function render() {
+  if (!user || !profile) return authScreen();
+  let content = "";
+  if (page === "cases") {
+    content = `<section class="hero">
+      <div class="muted">COLLECT · OPEN · TRADE</div>
+      <h1>Поймай легендарный дроп</h1>
+      <p>Открывай кейсы, собирай коллекцию и продавай предметы.</p>
+    </section><h2>Кейсы</h2><div class="grid">
+      ${cases.map(caseCard).join("") || "Кейсов пока нет"}
+    </div>`;
   }
-}
+  if (page === "market") {
+    content = `<h2>Маркет</h2><div class="grid">
+      ${items.map(item => itemCard(item)).join("") || "Предметов пока нет"}
+    </div>`;
+  }
+  if (page === "inventory") {
+    content = `<h2>Мой инвентарь</h2><div class="grid">
+      ${inventory.map(entry => entry.items
+        ? itemCard({ ...entry.items, inventoryId: entry.id }, true)
+        : "").join("") || "Инвентарь пуст"}
+    </div>`;
+  }
+  if (page === "admin" && profile.role === "admin") content = adminPage();
 
-function getToken(request) {
-  const auth = request.headers.get("authorization") || "";
-  if (auth.startsWith("Bearer ")) return auth.slice(7);
+  app.innerHTML = header() + `<main>${content}
+    <p class="muted">DROPZONE · Все предметы и монеты виртуальные.</p>
+  </main>`;
 
-  const cookie = request.headers.get("cookie") || "";
-  const match = cookie.match(/(?:^|;\s*)dz_session=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : "";
-}
-
-function cookieHeader(token, clear = false) {
-  return `dz_session=${clear ? "" : encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${clear ? 0 : 604800}`;
-}
-
-function publicUser(user) {
-  return {
-    username: user.username,
-    balance: user.balance,
-    inventory: user.inventory
-      .map(id => id)
+  app.querySelectorAll("[data-page]").forEach(button => {
+    button.onclick = () => { page = button.dataset.page; render(); };
+  });
+  document.querySelector("#logout").onclick = async () => {
+    try { await api("logout"); } catch {}
+    user = profile = null;
+    inventory = [];
+    authScreen();
   };
+  app.querySelectorAll("[data-open]").forEach(button => {
+    button.onclick = () => openCase(button.dataset.open);
+  });
+  app.querySelectorAll("[data-buy]").forEach(button => {
+    button.onclick = () => buyItem(button.dataset.buy);
+  });
+  app.querySelectorAll("[data-sell]").forEach(button => {
+    button.onclick = () => sellItem(button.dataset.sell);
+  });
+  wireAdmin();
 }
-
-function cleanString(value, max = 60) {
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
-function validPrice(value) {
-  return Number.isSafeInteger(value) && value >= 1 && value <= 100000000;
-}
-
-function weightedItem(db, caseData) {
-  const available = caseData.drops
-    .filter(drop =>
-      db.items.some(item => item.id === drop.itemId) &&
-      Number.isFinite(drop.weight) &&
-      drop.weight > 0
-    );
-
-  const total = available.reduce((sum, drop) => sum + drop.weight, 0);
-  if (!total) return null;
-
-  let roll = crypto.randomInt(0, 1000000000) / 1000000000 * total;
-
-  for (const drop of available) {
-    roll -= drop.weight;
-    if (roll < 0) return db.items.find(item => item.id === drop.itemId);
-  }
-
-  return db.items.find(item => item.id === available[available.length - 1].itemId);
-}
-
-function defaultDatabase() {
-  return {
-    users: [],
-    items: DEFAULT_ITEMS,
-    cases: DEFAULT_CASES,
-    transactions: []
-  };
-}
-
-async function readDatabase(store) {
-  let db = await store.get("database", { type: "json" });
-
-  if (!db) {
-    db = defaultDatabase();
-    await store.setJSON("database", db);
-  }
-
-  if (!Array.isArray(db.users) ||
-      !Array.isArray(db.items) ||
-      !Array.isArray(db.cases) ||
-      !Array.isArray(db.transactions)) {
-    throw new Error("Database format is invalid");
-  }
-
-  return db;
-}
-
-async function writeDatabase(store, db) {
-  await store.setJSON("database", db);
-}
-
-export default async function handler(request) {
-  if (!ADMIN_PASSWORD || !SESSION_SECRET) {
-    return json({
-      error: "Настрой ADMIN_PASSWORD и SESSION_SECRET в Netlify Environment Variables"
-    }, 500);
-  }
-
-  const url = new URL(request.url);
-  const action = url.searchParams.get("action") || "";
-  const method = request.method.toUpperCase();
-
-  if (method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Allow": "GET, POST, OPTIONS"
-      }
-    });
-  }
-
-  const store = getStore(STORE_NAME);
-
+async function buyItem(id) {
   try {
-    if (method === "GET" && action === "state") {
-      const db = await readDatabase(store);
-      const token = getToken(request);
-      const session = verifyToken(token);
-
-      const user = session?.role === "user"
-        ? db.users.find(entry => entry.id === session.sub)
-        : null;
-
-      return json({
-        items: db.items,
-        cases: db.cases,
-        user: user ? publicUser(user) : null,
-        isAdmin: session?.role === "admin"
-      });
-    }
-
-    if (method !== "POST") {
-      return json({ error: "Метод не поддерживается" }, 405);
-    }
-
-    const body = await request.json().catch(() => null);
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      return json({ error: "Некорректный JSON" }, 400);
-    }
-
-    if (action === "register") {
-      const username = cleanString(body.username, 20);
-      const password = typeof body.password === "string" ? body.password : "";
-
-      if (!/^[a-zA-Z0-9_-]{3,20}$/.test(username) ||
-          password.length < 8 || password.length > 100) {
-        return json({
-          error: "Имя: 3–20 символов. Пароль: 8–100 символов"
-        }, 400);
-      }
-
-      const db = await readDatabase(store);
-      if (db.users.some(user =>
-        user.username.toLowerCase() === username.toLowerCase()
-      )) {
-        return json({ error: "Это имя уже занято" }, 409);
-      }
-
-      const user = {
-        id: randomId("user"),
-        username,
-        passwordHash: hashPassword(password),
-        balance: 1000,
-        inventory: [],
-        createdAt: Date.now()
-      };
-
-      db.users.push(user);
-      await writeDatabase(store, db);
-
-      const token = sign({
-        sub: user.id,
-        role: "user",
-        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
-      });
-
-      return json({
-        user: publicUser(user)
-      }, 201, { "Set-Cookie": cookieHeader(token) });
-    }
-
-    if (action === "login") {
-      const username = cleanString(body.username, 20);
-      const password = typeof body.password === "string" ? body.password : "";
-
-      const db = await readDatabase(store);
-      const user = db.users.find(entry =>
-        entry.username.toLowerCase() === username.toLowerCase()
-      );
-
-      if (!user || !verifyPassword(password, user.passwordHash)) {
-        return json({ error: "Неверное имя или пароль" }, 401);
-      }
-
-      const token = sign({
-        sub: user.id,
-        role: "user",
-        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
-      });
-
-      return json({
-        user: publicUser(user)
-      }, 200, { "Set-Cookie": cookieHeader(token) });
-    }
-
-    if (action === "admin-login") {
-      const password = typeof body.password === "string" ? body.password : "";
-      if (password !== ADMIN_PASSWORD) {
-        return json({ error: "Неверный пароль администратора" }, 401);
-      }
-
-      const token = sign({
-        sub: "admin",
-        role: "admin",
-        exp: Date.now() + 4 * 60 * 60 * 1000
-      });
-
-      return json({
-        isAdmin: true
-      }, 200, { "Set-Cookie": cookieHeader(token) });
-    }
-
-    const session = verifyToken(getToken(request));
-    if (!session) {
-      return json({ error: "Войди в аккаунт" }, 401);
-    }
-
-    const db = await readDatabase(store);
-    const user = session.role === "user"
-      ? db.users.find(entry => entry.id === session.sub)
-      : null;
-
-    if (action === "logout") {
-      return json({ ok: true }, 200, {
-        "Set-Cookie": cookieHeader("", true)
-      });
-    }
-
-    if (action === "open-case") {
-      if (!user) return json({ error: "Нет доступа" }, 403);
-
-      const caseData = db.cases.find(entry => entry.id === body.caseId);
-      if (!caseData) return json({ error: "Кейс не найден" }, 404);
-      if (user.balance < caseData.price) {
-        return json({ error: "Не хватает монет" }, 400);
-      }
-
-      const item = weightedItem(db, caseData);
-      if (!item) return json({ error: "В кейсе нет предметов" }, 400);
-
-      user.balance -= caseData.price;
-      user.inventory.push(item.id);
-      db.transactions.push({
-        id: randomId("tx"),
-        userId: user.id,
-        type: "case",
-        itemId: item.id,
-        caseId: caseData.id,
-        createdAt: Date.now()
-      });
-
-      await writeDatabase(store, db);
-      return json({
-        item,
-        user: publicUser(user)
-      });
-    }
-
-    if (action === "buy-item") {
-      if (!user) return json({ error: "Нет доступа" }, 403);
-
-      const item = db.items.find(entry => entry.id === body.itemId);
-      if (!item) return json({ error: "Предмет не найден" }, 404);
-      if (user.balance < item.price) {
-        return json({ error: "Не хватает монет" }, 400);
-      }
-
-      user.balance -= item.price;
-      user.inventory.push(item.id);
-      db.transactions.push({
-        id: randomId("tx"),
-        userId: user.id,
-        type: "buy",
-        itemId: item.id,
-        createdAt: Date.now()
-      });
-
-      await writeDatabase(store, db);
-      return json({ user: publicUser(user) });
-    }
-
-    if (action === "sell-item") {
-      if (!user) return json({ error: "Нет доступа" }, 403);
-
-      const index = Number(body.index);
-      if (!Number.isInteger(index) || index < 0 || index >= user.inventory.length) {
-        return json({ error: "Предмет не найден" }, 404);
-      }
-
-      const itemId = user.inventory[index];
-      const item = db.items.find(entry => entry.id === itemId);
-      if (!item) return json({ error: "Предмет больше недоступен" }, 404);
-
-      const payout = Math.floor(item.price * 0.6);
-      user.inventory.splice(index, 1);
-      user.balance += payout;
-      db.transactions.push({
-        id: randomId("tx"),
-        userId: user.id,
-        type: "sell",
-        itemId: item.id,
-        createdAt: Date.now()
-      });
-
-      await writeDatabase(store, db);
-      return json({ user: publicUser(user), payout });
-    }
-
-    if (session.role !== "admin") {
-      return json({ error: "Только администратор может это сделать" }, 403);
-    }
-
-    if (action === "reset-accounts") {
-      // Keep cases and items intact; remove only user accounts and transaction history.
-      const removedUsers = db.users.length;
-      db.users = [];
-      db.transactions = [];
-      await writeDatabase(store, db);
-      return json({ ok: true, removedUsers, message: "Аккаунты сброшены. Кейсы и предметы сохранены." });
-    }
-
-    if (action === "update-item") {
-      const item = db.items.find(entry => entry.id === body.id);
-      const price = body.price;
-
-      if (!item || !validPrice(price)) {
-        return json({ error: "Проверь предмет и цену" }, 400);
-      }
-
-      item.price = price;
-    } else if (action === "delete-item") {
-      const id = cleanString(body.id, 100);
-      const requestedName = cleanString(body.name, 45).toLocaleLowerCase();
-      let target = db.items.find(item => item.id === id);
-
-      // Если интерфейс прислал устаревший ID, используем точное имя,
-      // но только когда совпадение единственное.
-      if (!target && requestedName) {
-        const matches = db.items.filter(
-          item => item.name.trim().toLocaleLowerCase() === requestedName
-        );
-        if (matches.length === 1) target = matches[0];
-      }
-
-      if (!target) {
-        return json({ error: "Предмет не найден. Обнови страницу и попробуй снова" }, 404);
-      }
-
-      const deletedId = target.id;
-      db.items = db.items.filter(item => item.id !== deletedId);
-      db.cases.forEach(c => {
-        c.drops = c.drops.filter(drop => drop.itemId !== deletedId);
-      });
-      db.users.forEach(entry => {
-        entry.inventory = entry.inventory.filter(itemId => itemId !== deletedId);
-      });
-    } else if (action === "update-case") {
-      const c = db.cases.find(entry => entry.id === body.id);
-      if (!c || !validPrice(body.price)) {
-        return json({ error: "Проверь кейс и цену" }, 400);
-      }
-
-      c.price = body.price;
-    } else if (action === "delete-case") {
-      const id = cleanString(body.id, 100);
-      const requestedName = cleanString(body.name, 45).toLocaleLowerCase();
-      let target = db.cases.find(c => c.id === id);
-
-      // Резервный поиск по точному названию, если ID в интерфейсе устарел.
-      if (!target && requestedName) {
-        const matches = db.cases.filter(
-          c => c.name.trim().toLocaleLowerCase() === requestedName
-        );
-        if (matches.length === 1) target = matches[0];
-      }
-
-      if (!target) {
-        return json({ error: "Кейс не найден. Обнови страницу и попробуй снова" }, 404);
-      }
-
-      const deletedId = target.id;
-      db.cases = db.cases.filter(c => c.id !== deletedId);
-    } else if (action === "create-item") {
-      const name = cleanString(body.name, 45);
-      const icon = cleanString(body.icon || "💎", 8);
-      const rarity = cleanString(body.rarity, 20);
-      const price = body.price;
-
-      if (!name || !["common", "uncommon", "rare", "epic", "legendary"].includes(rarity)
-          || !validPrice(price)) {
-        return json({ error: "Проверь данные предмета" }, 400);
-      }
-
-      const item = { id: randomId("item"), name, icon, rarity, price };
-      db.items.push(item);
-
-      const weights = {
-        common: 45, uncommon: 25, rare: 12, epic: 3, legendary: 0.35
-      };
-
-      db.cases.forEach(c => {
-        c.drops.push({ itemId: item.id, weight: weights[rarity] });
-      });
-    } else if (action === "create-case") {
-      const name = cleanString(body.name, 45);
-      const icon = cleanString(body.icon || "📦", 8);
-      const desc = cleanString(body.desc || "Коллекционный кейс", 100);
-      const price = body.price;
-
-      if (!name || !validPrice(price)) {
-        return json({ error: "Проверь название и цену" }, 400);
-      }
-
-      const weights = {
-        common: 45, uncommon: 25, rare: 12, epic: 3, legendary: 0.35
-      };
-
-      db.cases.push({
-        id: randomId("case"),
-        name, icon, desc, price,
-        drops: db.items.map(item => ({
-          itemId: item.id,
-          weight: weights[item.rarity] || 1
-        }))
-      });
-    } else if (action === "add-balance") {
-      const target = db.users.find(entry => entry.username === body.username);
-      const amount = body.amount;
-
-      if (!target || !validPrice(amount)) {
-        return json({ error: "Проверь пользователя и сумму" }, 400);
-      }
-
-      target.balance += amount;
-    } else {
-      return json({ error: "Неизвестное действие" }, 404);
-    }
-
-    await writeDatabase(store, db);
-    return json({
-      ok: true,
-      items: db.items,
-      cases: db.cases
+    await api("buy_item", { item_id: id });
+    await refresh(); render(); msg("предмет куплен");
+  } catch (e) { msg(e.message); }
+}
+async function sellItem(id) {
+  try {
+    await api("sell_item", { inventory_id: Number(id) });
+    await refresh(); render(); msg("предмет продан");
+  } catch (e) { msg(e.message); }
+}
+async function openCase(id) {
+  if (spinning) return;
+  spinning = true;
+  try {
+    const result = await api("open_case", { case_id: id });
+    await refresh();
+    const winner = result.item;
+    const reel = Array.from({ length: 32 }, (_, i) =>
+      items[i % Math.max(1, items.length)]).filter(Boolean);
+    reel[27] = winner;
+    modal.classList.remove("hidden");
+    modal.innerHTML = `
+      <div class="modalbox">
+        <div class="muted">OPENING CASE</div>
+        <h2>Твой дроп</h2>
+        <div class="reel"><div class="track" id="track">
+          ${reel.map(item => `<div class="reelitem">${esc(item.icon)}</div>`).join("")}
+        </div></div>
+        <h2 id="win" class="hidden">${esc(winner.name)}</h2>
+        <p id="winPrice" class="price hidden">${money(winner.price)}</p>
+        <button id="claim" class="hidden">Забрать предмет</button>
+      </div>`;
+    const track = document.querySelector("#track");
+    requestAnimationFrame(() => {
+      const reelBox = document.querySelector(".reel");
+      const winnerIndex = 27;
+      const itemWidth = 105;
+      const gap = 8;
+      const leftPadding = 8;
+      // Align the winning card's center exactly with the center marker.
+      const winnerCenter = leftPadding + winnerIndex * (itemWidth + gap) + itemWidth / 2;
+      const offset = winnerCenter - reelBox.clientWidth / 2;
+      track.style.transition = "none";
+      track.style.transform = "translateX(0px)";
+      void track.offsetWidth;
+      track.style.transition = "transform 4.5s cubic-bezier(.08,.72,.08,1)";
+      track.style.transform = `translateX(-${offset}px)`;
     });
-  } catch (error) {
-    console.error("DROPZONE function error:", error);
-    return json({ error: "Внутренняя ошибка сервера" }, 500);
+    setTimeout(() => {
+      document.querySelector("#win")?.classList.remove("hidden");
+      document.querySelector("#winPrice")?.classList.remove("hidden");
+      const claim = document.querySelector("#claim");
+      if (!claim) return;
+      claim.classList.remove("hidden");
+      claim.onclick = () => {
+        modal.classList.add("hidden");
+        spinning = false;
+        page = "inventory";
+        render();
+      };
+    }, 4700);
+  } catch (e) {
+    spinning = false;
+    msg(e.message);
   }
 }
+function adminPage() {
+  return `
+    <h2>Админ-панель</h2>
+    <section class="box" style="border-color:#a34b5b;margin-bottom:18px">
+      <h3>Сброс аккаунтов</h3>
+      <p class="muted">Удалит аккаунты пользователей и историю операций. Кейсы и предметы останутся.</p>
+      <button id="resetAccounts" class="secondary">Сбросить аккаунты</button>
+    </section>
+    <section class="box">
+      <h3>Добавить предмет</h3>
+      <form id="newItem" class="field">
+        <input name="name" placeholder="Название" required maxlength="45">
+        <input name="icon" placeholder="Эмодзи" value="💎" required maxlength="8">
+        <select name="rarity">
+          <option value="common">common</option><option value="uncommon">uncommon</option>
+          <option value="rare">rare</option><option value="epic">epic</option><option value="legendary">legendary</option>
+        </select>
+        <input name="price" type="number" min="1" max="100000000" placeholder="Цена" required>
+        <button>Добавить предмет</button>
+      </form>
+    </section>
+    <section class="box" style="margin-top:18px">
+      <h3>Создать кейс</h3>
+      <form id="newCase" class="field">
+        <input name="name" placeholder="Название кейса" required maxlength="45">
+        <input name="icon" value="📦" required maxlength="8">
+        <input name="description" placeholder="Описание" maxlength="100">
+        <input name="price" type="number" min="1" max="100000000" placeholder="Цена открытия" required>
+        <button>Создать кейс</button>
+      </form>
+    </section>
+    <h2 style="margin-top:28px">Предметы</h2>
+    <div class="box tablewrap"><table><thead><tr><th>Предмет</th><th>Цена</th><th>Действия</th></tr></thead>
+    <tbody>${items.map(item => `<tr>
+      <td>${esc(item.icon)} ${esc(item.name)}</td><td>${money(item.price)}</td><td class="row">
+        <button data-edit-price="${esc(item.id)}">Цена</button>
+        <button data-delete-item="${esc(item.id)}" class="secondary">Удалить</button>
+      </td></tr>`).join("")}</tbody></table></div>
+    <h2 style="margin-top:28px">Кейсы</h2>
+    <div class="box tablewrap"><table><thead><tr><th>Кейс</th><th>Цена</th><th>Действия</th></tr></thead>
+    <tbody>${cases.map(c => `<tr>
+      <td>${esc(c.icon)} ${esc(c.name)}</td><td>${money(c.price)}</td><td class="row">
+        <button data-edit-case="${esc(c.id)}">Цена</button>
+        <button data-delete-case="${esc(c.id)}" class="secondary">Удалить</button>
+      </td></tr>`).join("")}</tbody></table></div>`;
+}
+function wireAdmin() {
+  if (profile?.role !== "admin") return;
+  document.querySelector("#resetAccounts")?.addEventListener("click", async () => {
+    if (!confirm("Точно удалить все аккаунты пользователей и историю операций? Кейсы и предметы останутся. Это действие нельзя отменить.")) return;
+    try {
+      await api("reset-accounts", {});
+      await api("logout", {});
+      location.reload();
+    } catch (e) { msg(e.message || "Не удалось сбросить аккаунты"); }
+  });
+  document.querySelector("#newItem")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    try {
+      await api("admin_create_item", {
+        name: f.get("name"), icon: f.get("icon"),
+        rarity: f.get("rarity"), price: Number(f.get("price"))
+      });
+      await refresh(); render(); msg("предмет создан");
+    } catch (err) { msg(err.message); }
+  });
+  document.querySelector("#newCase")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    try {
+      await api("admin_create_case", {
+        name: f.get("name"), icon: f.get("icon"),
+        description: f.get("description"), price: Number(f.get("price"))
+      });
+      await refresh(); render(); msg("кейс создан");
+    } catch (err) { msg(err.message); }
+  });
+  document.querySelectorAll("[data-delete-item]").forEach(b => b.onclick = async () => {
+    if (!confirm("Удалить предмет?")) return;
+    try {
+      const item = items.find(entry => entry.id === b.dataset.deleteItem);
+      await api("admin_delete_item", {
+        id: b.dataset.deleteItem,
+        name: item?.name || ""
+      });
+      await refresh(); render(); msg("предмет удалён у всех");
+    } catch (e) { msg(e.message); }
+  });
+  document.querySelectorAll("[data-delete-case]").forEach(b => b.onclick = async () => {
+    if (!confirm("Удалить кейс у всех пользователей?")) return;
+    try {
+      const caseData = cases.find(entry => entry.id === b.dataset.deleteCase);
+      await api("admin_delete_case", {
+        id: b.dataset.deleteCase,
+        name: caseData?.name || ""
+      });
+      await refresh(); render(); msg("кейс удалён у всех");
+    } catch (e) { msg(e.message); }
+  });
+  document.querySelectorAll("[data-edit-price]").forEach(b => b.onclick = async () => {
+    const value = prompt("Новая цена предмета");
+    if (value === null) return;
+    try {
+      await api("admin_update_item", { id: b.dataset.editPrice, price: Number(value) });
+      await refresh(); render(); msg("цена изменена");
+    } catch (e) { msg(e.message); }
+  });
+  document.querySelectorAll("[data-edit-case]").forEach(b => b.onclick = async () => {
+    const value = prompt("Новая цена кейса");
+    if (value === null) return;
+    try {
+      await api("admin_update_case", { id: b.dataset.editCase, price: Number(value) });
+      await refresh(); render(); msg("цена кейса изменена");
+    } catch (e) { msg(e.message); }
+  });
+}
+async function boot() {
+  try {
+    await refresh();
+    if (!user || !profile) return authScreen();
+    page = profile.role === "admin" ? "admin" : "cases";
+    render();
+  } catch (e) {
+    app.innerHTML = `<main><section class="box">
+      <h2>Не удалось загрузить сайт</h2><p>${esc(e.message)}</p>
+      <button onclick="location.reload()">Повторить</button>
+    </section></main>`;
+  }
+}
+boot();
+</script>
+</body>
+</html>
