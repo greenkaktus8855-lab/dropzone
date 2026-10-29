@@ -110,10 +110,7 @@ async function api(action, data = {}) {
     {
       method,
       credentials: "same-origin",
-      cache: "no-store",
-      headers: method === "POST"
-        ? { "Content-Type": "application/json", "Cache-Control": "no-cache" }
-        : { "Cache-Control": "no-cache" },
+      headers: method === "POST" ? { "Content-Type": "application/json" } : {},
       ...(method === "POST" ? { body: JSON.stringify(payload) } : {})
     }
   );
@@ -303,36 +300,52 @@ async function openCase(id) {
     const result = await api("open_case", { case_id: id });
     await refresh();
     const winner = result.item;
-    if (!winner) throw new Error("Сервер не вернул предмет");
-
-    // В этом безопасном варианте нет случайной рулетки: показываем
-    // фактически выданный сервером предмет без шанса/ставок и прокрутки.
+    const reel = Array.from({ length: 32 }, (_, i) =>
+      items[i % Math.max(1, items.length)]).filter(Boolean);
+    reel[27] = winner;
     modal.classList.remove("hidden");
     modal.innerHTML = `
       <div class="modalbox">
-        <div class="muted">DROPZONE · ПРЕДМЕТ ПОЛУЧЕН</div>
-        <h2>Твой предмет</h2>
-        <div class="art" style="font-size:64px">${esc(winner.icon || "🎁")}</div>
-        <h2>${esc(winner.name || "Предмет")}</h2>
-        <p class="price">${money(winner.price)}</p>
-        <p class="muted">Предмет уже сохранён в твоём инвентаре.</p>
-        <button id="claim">Перейти в инвентарь</button>
+        <div class="muted">OPENING CASE</div>
+        <h2>Твой дроп</h2>
+        <div class="reel"><div class="track" id="track">
+          ${reel.map(item => `<div class="reelitem">${esc(item.icon)}</div>`).join("")}
+        </div></div>
+        <h2 id="win" class="hidden">${esc(winner.name)}</h2>
+        <p id="winPrice" class="price hidden">${money(winner.price)}</p>
+        <button id="claim" class="hidden">Забрать предмет</button>
       </div>`;
-    document.querySelector("#claim").onclick = () => {
-      modal.classList.add("hidden");
-      page = "inventory";
-      render();
-    };
+    const track = document.querySelector("#track");
+    requestAnimationFrame(() => {
+      track.style.transition = "transform 4.5s cubic-bezier(.08,.72,.08,1)";
+      track.style.transform = `translateX(-${27 * 113 - 110}px)`;
+    });
+    setTimeout(() => {
+      document.querySelector("#win")?.classList.remove("hidden");
+      document.querySelector("#winPrice")?.classList.remove("hidden");
+      const claim = document.querySelector("#claim");
+      if (!claim) return;
+      claim.classList.remove("hidden");
+      claim.onclick = () => {
+        modal.classList.add("hidden");
+        spinning = false;
+        page = "inventory";
+        render();
+      };
+    }, 4700);
   } catch (e) {
-    msg(e.message || "Не удалось открыть кейс");
-  } finally {
     spinning = false;
+    msg(e.message);
   }
 }
-
 function adminPage() {
   return `
     <h2>Админ-панель</h2>
+    <section class="box" style="border-color:#a34b5b;margin-bottom:18px">
+      <h3>Сброс аккаунтов</h3>
+      <p class="muted">Удалит аккаунты пользователей и историю операций. Кейсы и предметы останутся.</p>
+      <button id="resetAccounts" class="secondary">Сбросить аккаунты</button>
+    </section>
     <section class="box">
       <h3>Добавить предмет</h3>
       <form id="newItem" class="field">
@@ -373,6 +386,14 @@ function adminPage() {
 }
 function wireAdmin() {
   if (profile?.role !== "admin") return;
+  document.querySelector("#resetAccounts")?.addEventListener("click", async () => {
+    if (!confirm("Точно удалить все аккаунты пользователей и историю операций? Кейсы и предметы останутся. Это действие нельзя отменить.")) return;
+    try {
+      await api("reset-accounts", {});
+      await api("logout", {});
+      location.reload();
+    } catch (e) { msg(e.message || "Не удалось сбросить аккаунты"); }
+  });
   document.querySelector("#newItem")?.addEventListener("submit", async e => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -448,29 +469,6 @@ async function boot() {
   }
 }
 boot();
-
-// Подтягиваем баланс и инвентарь с сервера без перезагрузки страницы.
-setInterval(async () => {
-  if (document.hidden || !user || spinning || page === "admin") return;
-  try {
-    const before = JSON.stringify({
-      balance: profile?.balance,
-      inventory: inventory.map(entry => entry.items?.id),
-      items: items.map(item => [item.id, item.price]),
-      cases: cases.map(c => [c.id, c.price])
-    });
-    await refresh();
-    const after = JSON.stringify({
-      balance: profile?.balance,
-      inventory: inventory.map(entry => entry.items?.id),
-      items: items.map(item => [item.id, item.price]),
-      cases: cases.map(c => [c.id, c.price])
-    });
-    if (before !== after) render();
-  } catch {
-    // Временная ошибка сети не должна ломать страницу.
-  }
-}, 7000);
 </script>
 </body>
 </html>
