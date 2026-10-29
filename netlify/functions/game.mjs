@@ -182,10 +182,57 @@ function weightedItem(db, caseData) {
 function defaultDatabase() {
   return {
     users: [],
-    items: DEFAULT_ITEMS,
+    items: DEFAULT_ITEMS.map(item => ({
+      ...item,
+      priceHistory: [{ price: item.price, at: Date.now() }]
+    })),
     cases: DEFAULT_CASES,
-    transactions: []
+    transactions: [],
+    marketUpdatedAt: Date.now()
   };
+}
+
+function ensurePriceHistory(db) {
+  let changed = false;
+  const now = Date.now();
+  for (const item of db.items) {
+    if (!Array.isArray(item.priceHistory) || item.priceHistory.length === 0) {
+      item.priceHistory = [
+        { price: Math.max(1, Math.floor(Number(item.price) * 0.9)), at: now - 86400000 },
+        { price: Number(item.price) || 1, at: now }
+      ];
+      changed = true;
+    } else {
+      const last = item.priceHistory[item.priceHistory.length - 1];
+      if (!last || Number(last.price) !== Number(item.price)) {
+        item.priceHistory.push({ price: Number(item.price) || 1, at: now });
+        item.priceHistory = item.priceHistory.slice(-100);
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
+function advanceMarket(db) {
+  const now = Date.now();
+  let changed = ensurePriceHistory(db);
+  const lastUpdate = Number(db.marketUpdatedAt) || 0;
+  if (now - lastUpdate < 60000) return changed;
+
+  for (const item of db.items) {
+    const previous = Math.max(1, Math.floor(Number(item.price) || 1));
+    // Мягкая симуляция роста: колебания цены с небольшим положительным уклоном.
+    const movement = (crypto.randomInt(-150, 351) / 10000);
+    const next = Math.max(1, Math.min(100000000, Math.round(previous * (1 + movement))));
+    item.price = next;
+    if (!Array.isArray(item.priceHistory)) item.priceHistory = [];
+    item.priceHistory.push({ price: next, at: now });
+    item.priceHistory = item.priceHistory.slice(-100);
+    if (next !== previous) changed = true;
+  }
+  db.marketUpdatedAt = now;
+  return true || changed;
 }
 
 async function readDatabase(store) {
@@ -218,7 +265,7 @@ export default async function handler(request) {
   }
 
   const url = new URL(request.url);
-  const action = url.searchParams.get("action") || "";
+  let action = url.searchParams.get("action") || "";
   const method = request.method.toUpperCase();
 
   if (method === "OPTIONS") {
@@ -235,6 +282,7 @@ export default async function handler(request) {
   try {
     if (method === "GET" && action === "state") {
       const db = await readDatabase(store);
+      if (advanceMarket(db)) await writeDatabase(store, db);
       const token = getToken(request);
       const session = verifyToken(token);
 
@@ -259,6 +307,16 @@ export default async function handler(request) {
       return json({ error: "Некорректный JSON" }, 400);
     }
 
+    if (!action && typeof body.action === "string") action = body.action;
+    const actionAliases = {
+      open_case: "open-case", buy_item: "buy-item", sell_item: "sell-item",
+      admin_login: "admin-login", admin_create_item: "create-item",
+      admin_create_case: "create-case", admin_delete_item: "delete-item",
+      admin_delete_case: "delete-case", admin_update_item: "update-item",
+      admin_update_case: "update-case", add_balance: "add-balance"
+    };
+    action = actionAliases[action] || action.replaceAll("_", "-");
+
     if (action === "register") {
       const username = cleanString(body.username, 20);
       const password = typeof body.password === "string" ? body.password : "";
@@ -281,7 +339,7 @@ export default async function handler(request) {
         id: randomId("user"),
         username,
         passwordHash: hashPassword(password),
-        balance: 100,
+        balance: 1000,
         inventory: [],
         createdAt: Date.now()
       };
@@ -450,6 +508,9 @@ export default async function handler(request) {
       }
 
       item.price = price;
+      if (!Array.isArray(item.priceHistory)) item.priceHistory = [];
+      item.priceHistory.push({ price, at: Date.now() });
+      item.priceHistory = item.priceHistory.slice(-100);
     } else if (action === "delete-item") {
       const id = cleanString(body.id, 100);
       const requestedName = cleanString(body.name, 45).toLocaleLowerCase();
@@ -513,7 +574,10 @@ export default async function handler(request) {
         return json({ error: "Проверь данные предмета" }, 400);
       }
 
-      const item = { id: randomId("item"), name, icon, rarity, price };
+      const item = {
+        id: randomId("item"), name, icon, rarity, price,
+        priceHistory: [{ price, at: Date.now() }]
+      };
       db.items.push(item);
 
       const weights = {
