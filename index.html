@@ -34,9 +34,9 @@ h2{margin:0 0 18px}.muted{color:var(--muted)}
 #message{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#25213b;border:1px solid #514276;border-radius:12px;padding:13px 18px;display:none;z-index:10;max-width:90%;text-align:center}
 #modal{position:fixed;inset:0;background:#05070ded;z-index:5;display:grid;place-items:center;padding:15px}
 .modalbox{width:min(800px,100%);background:#141927;border:1px solid #514276;border-radius:20px;padding:25px;text-align:center}
-.reel{height:140px;overflow:hidden;position:relative;border:1px solid #514276;border-radius:12px;background:#080b12;margin:24px 0}
+.reel{height:140px;width:100%;max-width:750px;margin:24px auto;overflow:hidden;position:relative;border:1px solid #514276;border-radius:12px;background:#080b12}
 .reel:after{content:"";position:absolute;left:50%;top:0;bottom:0;width:3px;background:#ffd477}
-.track{display:flex;gap:8px;width:max-content;padding:8px;height:100%}
+.track{display:flex;gap:8px;width:max-content;padding:8px;height:100%;will-change:transform}
 .reelitem{width:105px;flex-shrink:0;background:#171d2b;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;font-size:34px}
 table{border-collapse:collapse;width:100%;min-width:570px}
 td,th{text-align:left;padding:12px;border-bottom:1px solid var(--line)}
@@ -317,8 +317,19 @@ async function openCase(id) {
       </div>`;
     const track = document.querySelector("#track");
     requestAnimationFrame(() => {
+      const reelBox = document.querySelector(".reel");
+      const winnerIndex = 27;
+      const itemWidth = 105;
+      const gap = 8;
+      const leftPadding = 8;
+      // Align the winning card's center exactly with the center marker.
+      const winnerCenter = leftPadding + winnerIndex * (itemWidth + gap) + itemWidth / 2;
+      const offset = winnerCenter - reelBox.clientWidth / 2;
+      track.style.transition = "none";
+      track.style.transform = "translateX(0px)";
+      void track.offsetWidth;
       track.style.transition = "transform 4.5s cubic-bezier(.08,.72,.08,1)";
-      track.style.transform = `translateX(-${27 * 113 - 110}px)`;
+      track.style.transform = `translateX(-${offset}px)`;
     });
     setTimeout(() => {
       document.querySelector("#win")?.classList.remove("hidden");
@@ -443,32 +454,4 @@ function wireAdmin() {
     if (value === null) return;
     try {
       await api("admin_update_item", { id: b.dataset.editPrice, price: Number(value) });
-      await refresh(); render(); msg("цена изменена");
-    } catch (e) { msg(e.message); }
-  });
-  document.querySelectorAll("[data-edit-case]").forEach(b => b.onclick = async () => {
-    const value = prompt("Новая цена кейса");
-    if (value === null) return;
-    try {
-      await api("admin_update_case", { id: b.dataset.editCase, price: Number(value) });
-      await refresh(); render(); msg("цена кейса изменена");
-    } catch (e) { msg(e.message); }
-  });
-}
-async function boot() {
-  try {
-    await refresh();
-    if (!user || !profile) return authScreen();
-    page = profile.role === "admin" ? "admin" : "cases";
-    render();
-  } catch (e) {
-    app.innerHTML = `<main><section class="box">
-      <h2>Не удалось загрузить сайт</h2><p>${esc(e.message)}</p>
-      <button onclick="location.reload()">Повторить</button>
-    </section></main>`;
-  }
-}
-boot();
-</script>
-</body>
-</html>
+      await refresh(); render(); msg("цен
