@@ -3,504 +3,761 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090b12">
 <title>DROPZONE — NFT Simulator</title>
 <style>
-:root{color-scheme:dark;--bg:#090b12;--panel:#131827;--line:#293149;--purple:#9364ff;--blue:#637eff;--green:#65e4aa;--muted:#9ba6bf}
-*{box-sizing:border-box}
-body{margin:0;background:radial-gradient(ellipse at top,#241443,var(--bg) 50%);color:#f5f6ff;font-family:Arial,sans-serif;min-height:100vh}
-button,input,select{font:inherit}
-button{cursor:pointer;border:0;border-radius:10px;padding:12px 15px;background:linear-gradient(110deg,var(--purple),var(--blue));color:white;font-weight:bold}
-button:disabled{opacity:.5}
-input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b0f19;color:white}
-header{position:sticky;top:0;background:#0a0c14f2;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);z-index:3}
-.bar{max-width:1150px;margin:auto;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.logo{font-weight:1000;font-size:24px}.logo span{color:var(--purple)}
-nav{display:flex;gap:7px;flex-wrap:wrap}
-nav button,.secondary{background:#1a2030;border:1px solid var(--line)}
-main{max-width:1150px;margin:auto;padding:24px 16px 60px}
-.hero,.card,.box{background:linear-gradient(145deg,#171d2d,#101420);border:1px solid var(--line);border-radius:18px;padding:22px}
-.hero{padding:34px;margin-bottom:25px;background:linear-gradient(120deg,#271644,#14213a)}
-h1{font-size:clamp(30px,5vw,48px);margin:10px 0}
-h2{margin:0 0 18px}.muted{color:var(--muted)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}
-.art{height:130px;display:grid;place-items:center;background:#0b0e18;border:1px solid var(--line);border-radius:13px;font-size:58px;margin-bottom:15px}
-.price{color:var(--green);font-weight:bold}
-.card h3{margin:8px 0}.card p{color:var(--muted);min-height:35px;font-size:14px;line-height:1.5}
-.card button{width:100%;margin-top:12px}
-.section{margin:27px 0 16px}
-.auth{max-width:430px;margin:7vh auto;padding:25px}
-.field{display:grid;gap:7px;margin:14px 0}
-#message{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#25213b;border:1px solid #514276;border-radius:12px;padding:13px 18px;display:none;z-index:10;max-width:90%;text-align:center}
-#modal{position:fixed;inset:0;background:#05070ded;z-index:5;display:grid;place-items:center;padding:15px}
-.modalbox{width:min(800px,100%);background:#141927;border:1px solid #514276;border-radius:20px;padding:25px;text-align:center}
-.reel{height:140px;overflow:hidden;position:relative;border:1px solid #514276;border-radius:12px;background:#080b12;margin:24px 0}
-.reel:after{content:"";position:absolute;left:50%;top:0;bottom:0;width:3px;background:#ffd477}
-.track{display:flex;gap:8px;width:max-content;padding:8px;height:100%}
-.reelitem{width:105px;flex-shrink:0;background:#171d2b;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;font-size:34px;position:relative}.reelitem small{font-size:10px;color:var(--muted);max-width:94px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reelitem.winner{border-color:#ffd477;box-shadow:0 0 18px #ffd47766}.chartbox{background:#0b0e18;border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:12px}.chart{width:100%;height:220px;display:block}.statrow{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.stat{background:#0b0e18;border:1px solid var(--line);padding:12px;border-radius:12px;min-width:120px}.up{color:#65e4aa}.down{color:#ff8a9a}.itemclick{margin-top:8px;background:#20283a;width:100%}
-table{border-collapse:collapse;width:100%;min-width:570px}
-td,th{text-align:left;padding:12px;border-bottom:1px solid var(--line)}
-th{color:var(--muted)}
-.tablewrap{overflow:auto}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.row input{max-width:150px}
-.hidden{display:none!important}
-@media(max-width:600px){.bar{align-items:flex-start}.hero{padding:23px}.auth{margin:20px auto}}
+:root {
+  color-scheme: dark;
+  --bg: #090b12;
+  --panel: #131827;
+  --line: #293149;
+  --purple: #9364ff;
+  --blue: #6cbcff;
+  --text: #f4f5ff;
+  --muted: #929bb5;
+  --green: #59e6a0;
+  --red: #ff647c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px Arial, sans-serif;
+}
+button, input { font: inherit; }
+button {
+  border: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: var(--purple);
+  color: white;
+  font-weight: 700;
+}
+button:disabled { opacity: .5; cursor: wait; }
+button.secondary { background: #242c40; }
+button.danger { background: #9f3049; }
+header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px max(16px, calc((100% - 1100px)/2));
+  background: #0d101bed;
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+}
+.logo { font-size: 23px; font-weight: 900; letter-spacing: 2px; }
+.logo span { color: var(--purple); }
+.balance {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 14px;
+}
+main { max-width: 1100px; margin: auto; padding: 22px 16px 60px; }
+nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+nav button { background: #171d2b; border: 1px solid var(--line); }
+nav button.active { background: #493181; border-color: var(--purple); }
+h1 { font-size: clamp(26px, 5vw, 40px); margin: 12px 0; }
+h2 { margin-top: 28px; }
+p, .muted { color: var(--muted); line-height: 1.55; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px;
+}
+.card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #171d2c, #101420);
+}
+.card .emoji { font-size: 48px; margin: 12px 0; }
+.card h3 { margin: 8px 0; overflow-wrap: anywhere; }
+.card .price { font-size: 20px; font-weight: 800; margin: 12px 0; }
+.card button { width: 100%; margin-top: 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pill {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #28223e;
+  color: #cbbaff;
+  font-size: 12px;
+}
+.empty {
+  padding: 35px 15px;
+  text-align: center;
+  border: 1px dashed #39415a;
+  border-radius: 14px;
+  color: var(--muted);
+}
+#notice {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: max-content;
+  max-width: calc(100% - 28px);
+  padding: 13px 18px;
+  background: #252d40;
+  border: 1px solid #48516b;
+  border-radius: 12px;
+  box-shadow: 0 8px 35px #0008;
+  display: none;
+}
+#modal {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: none;
+  place-items: center;
+  padding: 14px;
+  background: #05070ded;
+}
+#modal.show { display: grid; }
+.modalbox {
+  width: min(700px, 100%);
+  min-width: 0;
+  max-height: 90dvh;
+  overflow: auto;
+  padding: clamp(15px, 4vw, 26px);
+  border: 1px solid #514276;
+  border-radius: 20px;
+  background: var(--panel);
+  text-align: center;
+}
+.reel {
+  width: 100%;
+  min-width: 0;
+  height: 135px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #514276;
+  border-radius: 12px;
+  background: #080b12;
+  margin: 22px 0;
+  isolation: isolate;
+}
+.reel::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  transform: translateX(-50%);
+  background: #ffd477;
+  box-shadow: 0 0 12px #ffd477;
+  pointer-events: none;
+}
+.track {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: max-content;
+  padding: 8px;
+  will-change: transform;
+}
+.reelitem {
+  flex: 0 0 105px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  background: #171d2b;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.reelitem .emoji { font-size: 32px; }
+.reelitem small { color: var(--muted); font-size: 10px; }
+.field {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  margin: 14px 0;
+}
+.field input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid var(--line);
+  background: #090d17;
+  border-radius: 10px;
+  color: white;
+}
+footer { padding-top: 25px; text-align: center; color: var(--muted); font-size: 12px; }
+@media(max-width: 480px) {
+  header { padding: 12px; }
+  .logo { font-size: 19px; }
+  .balance { padding: 9px; font-size: 13px; }
+  main { padding: 16px 12px 40px; }
+  .reelitem { flex-basis: 86px; }
+}
 </style>
 </head>
 <body>
-<div id="app"></div>
-<div id="message"></div>
-<div id="modal" class="hidden"></div>
+<header>
+  <div class="logo">DROP<span>ZONE</span></div>
+  <div class="balance">Баланс: <strong id="balance">—</strong></div>
+</header>
+
+<main>
+  <div id="auth">
+    <h1>добро пожаловать в DROPZONE</h1>
+    <p>войди в аккаунт или создай новый, чтобы открыть магазин</p>
+    <div class="card" style="max-width:430px">
+      <div class="field">
+        <label for="authName">Имя пользователя</label>
+        <input id="authName" autocomplete="username" maxlength="32" placeholder="твой логин">
+      </div>
+      <div class="field">
+        <label for="authPassword">Пароль</label>
+        <input id="authPassword" type="password" autocomplete="current-password" placeholder="твой пароль">
+      </div>
+      <div class="row">
+        <button id="loginBtn" type="button">Войти</button>
+        <button id="registerBtn" class="secondary" type="button">Регистрация</button>
+      </div>
+    </div>
+  </div>
+
+  <section id="app" hidden>
+    <nav>
+      <button data-page="cases" class="active">Кейсы</button>
+      <button data-page="inventory">Инвентарь</button>
+      <button data-page="market">Рынок</button>
+      <button data-page="profile">Профиль</button>
+      <button id="logoutBtn" class="secondary">Выйти</button>
+    </nav>
+    <div id="content"></div>
+  </section>
+  <footer>DROPZONE · виртуальные предметы · цены указаны в игровых монетах</footer>
+</main>
+
+<div id="notice" role="status"></div>
+
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modalbox">
+    <h2 id="modalTitle">Открытие кейса</h2>
+    <p id="modalText">выбираем предмет</p>
+    <div class="reel" id="reel">
+      <div class="track" id="track"></div>
+    </div>
+    <h2 id="winnerName"></h2>
+    <p id="winnerPrice"></p>
+    <div class="row" style="justify-content:center">
+      <button id="claimBtn" hidden>Забрать предмет</button>
+      <button id="closeModalBtn" class="secondary">Закрыть</button>
+    </div>
+  </div>
+</div>
 
 <script>
-const app = document.querySelector("#app");
-const modal = document.querySelector("#modal");
-let user = null;
-let profile = null;
-let items = [];
-let cases = [];
-let inventory = [];
-let page = "cases";
-let spinning = false;
-let spinTimer = null;
+"use strict";
 
-function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  })[c]);
-}
+const $ = (selector) => document.querySelector(selector);
+
+const state = {
+  user: null,
+  items: [],
+  cases: [],
+  page: "cases",
+  busy: false,
+  spinning: false,
+  pendingWinner: null,
+  timer: null
+};
+
 function money(value) {
-  return Math.floor(Number(value) || 0).toLocaleString("ru-RU") + " ₵";
-}
-function msg(text) {
-  const el = document.querySelector("#message");
-  el.textContent = text;
-  el.style.display = "block";
-  clearTimeout(msg.timer);
-  msg.timer = setTimeout(() => el.style.display = "none", 3000);
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.floor(n).toLocaleString("ru-RU") : "0";
 }
 
-/* Все запросы идут в Netlify Function. Авторизация хранится в HttpOnly cookie. */
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;"
+  })[ch]);
+}
+
+function notify(message) {
+  const box = $("#notice");
+  box.textContent = message;
+  box.style.display = "block";
+  clearTimeout(state.timer);
+  state.timer = setTimeout(() => box.style.display = "none", 3500);
+}
+
 async function api(action, data = {}) {
-  const actionMap = {
+  const aliases = {
     open_case: "open-case",
-    buy_item: "buy-item",
     sell_item: "sell-item",
-    admin_create_item: "create-item",
-    admin_create_case: "create-case",
-    admin_delete_item: "delete-item",
-    admin_delete_case: "delete-case",
-    admin_update_item: "update-item",
-    admin_update_case: "update-case"
+    buy_item: "buy-item"
   };
-  const keyMap = {
-    case_id: "caseId",
-    item_id: "itemId",
-    inventory_id: "index",
-    description: "desc"
-  };
-  const payload = {};
-  for (const [key, value] of Object.entries(data)) {
-    payload[keyMap[key] || key] = value;
-  }
-  const serverAction = actionMap[action] || action;
+  const serverAction = aliases[action] || action;
   const method = action === "state" ? "GET" : "POST";
-  const response = await fetch(
-    `/.netlify/functions/game?action=${encodeURIComponent(serverAction)}`,
-    {
-      method,
-      credentials: "same-origin",
-      headers: method === "POST" ? { "Content-Type": "application/json" } : {},
-      ...(method === "POST" ? { body: JSON.stringify(payload) } : {})
-    }
-  );
+  const url = `/.netlify/functions/game?action=${encodeURIComponent(serverAction)}`;
+
+  const response = await fetch(url, {
+    method,
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: {
+      "Accept": "application/json",
+      ...(method === "POST" ? {
+        "Content-Type": "application/json"
+      } : {})
+    },
+    ...(method === "POST" ? { body: JSON.stringify(data) } : {})
+  });
+
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "Ошибка сервера");
+
+  if (!response.ok || body.error) {
+    throw new Error(body.error || `Ошибка сервера: ${response.status}`);
+  }
   return body;
 }
 
-async function refresh() {
-  const state = await api("state");
-  items = Array.isArray(state.items) ? state.items : [];
-  cases = Array.isArray(state.cases) ? state.cases : [];
-  user = state.user || (state.isAdmin ? { username: "admin", balance: 0, inventory: [] } : null);
-  profile = user ? {
-    username: user.username,
+function normalizeUser(user) {
+  if (!user) return null;
+  return {
+    ...user,
     balance: Number(user.balance) || 0,
-    role: state.isAdmin ? "admin" : "user"
-  } : null;
-  inventory = user && Array.isArray(user.inventory)
-    ? user.inventory.map((itemId, index) => ({
-        id: String(index),
-        items: items.find(item => item.id === itemId) || null
-      })).filter(entry => entry.items)
-    : [];
-}
-
-function authScreen() {
-  app.innerHTML = `
-    <main>
-      <section class="box auth">
-        <div class="logo">DROP<span>ZONE</span></div>
-        <p class="muted">Виртуальные предметы и кейсы</p>
-        <form id="authForm">
-          <div class="field">
-            <label>Имя пользователя</label>
-            <input name="username" minlength="3" maxlength="20"
-              pattern="[a-zA-Z0-9_-]+" autocomplete="username">
-          </div>
-          <div class="field">
-            <label>Пароль</label>
-            <input name="password" type="password" required minlength="8"
-              maxlength="100" autocomplete="current-password">
-          </div>
-          <div class="row">
-            <button type="submit" data-mode="login">Войти</button>
-            <button type="submit" data-mode="register" class="secondary">Регистрация</button>
-            <button type="submit" data-mode="admin" class="secondary">Админ</button>
-          </div>
-        </form>
-        <p class="muted">Для аккаунта используй отдельный пароль, не от личной почты.</p>
-      </section>
-    </main>`;
-
-  document.querySelector("#authForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const mode = e.submitter?.dataset.mode || "login";
-    const form = new FormData(e.currentTarget);
-    const username = String(form.get("username") || "").trim();
-    const password = String(form.get("password") || "");
-    if (mode !== "admin" && !/^[a-zA-Z0-9_-]{3,20}$/.test(username)) {
-      msg("имя пользователя: 3–20 символов, только латиница, цифры, _ или -");
-      return;
-    }
-    try {
-      if (mode === "register") {
-        await api("register", { username, password });
-        await boot();
-        msg("аккаунт создан");
-      } else if (mode === "login") {
-        await api("login", { username, password });
-        await boot();
-      } else {
-        await api("admin-login", { password });
-        await boot();
-      }
-    } catch (error) {
-      msg(error.message || "Не удалось выполнить запрос");
-    }
-  });
-}
-
-function header() {
-  return `
-    <header><div class="bar">
-      <div class="logo">DROP<span>ZONE</span></div>
-      <nav>
-        <button data-page="cases">Кейсы</button>
-        <button data-page="growth">Рост цен</button>
-        <button data-page="inventory">Инвентарь</button>
-        ${profile?.role === "admin" ? '<button data-page="admin">Админка</button>' : ""}
-      </nav>
-      <div class="row">
-        <strong class="price">${profile ? money(profile.balance) : ""}</strong>
-        <button class="secondary" id="logout">Выход</button>
-      </div>
-    </div></header>`;
-}
-
-function itemCard(item, owned = false) {
-  return `
-    <article class="card">
-      <div class="art">${esc(item.icon || "💎")}</div>
-      <h3>${esc(item.name)}</h3>
-      <p>${esc(item.rarity || "collectible")} · виртуальный предмет</p>
-      <div class="price">${money(item.price)}</div>
-      ${owned
-        ? `<button data-sell="${esc(item.inventoryId)}">Продать за ${money(Math.floor(item.price * .6))}</button>`
-        : ""}
-      <button class="itemclick" data-detail="${esc(item.id)}">Посмотреть рост цены</button>
-    </article>`;
-}
-function historyFor(item) {
-  const history = Array.isArray(item.priceHistory) ? item.priceHistory : [];
-  if (history.length >= 2) return history.slice(-24);
-  const startingPrice = history.length ? Number(history[0].price) || item.price : item.price;
-  return [{ price: startingPrice, at: Date.now() - 60000 }, { price: startingPrice, at: Date.now() }];
-}
-function growthChart(item) {
-  const history = historyFor(item);
-  const values = history.map(point => Number(point.price) || 0);
-  const min = Math.min(...values), max = Math.max(...values);
-  const span = Math.max(1, max - min);
-  const points = values.map((value, i) => `${12 + (i / Math.max(1, values.length - 1)) * 376},${190 - ((value - min) / span) * 160}`).join(" ");
-  const first = values[0] || item.price, last = values[values.length - 1] || item.price;
-  const change = first ? ((last - first) / first) * 100 : 0;
-  return `<div class="chartbox">
-    <div class="statrow"><div class="stat"><div class="muted">Текущая цена</div><strong>${money(item.price)}</strong></div><div class="stat"><div class="muted">Изменение за историю</div><strong class="${change >= 0 ? "up" : "down"}">${change >= 0 ? "+" : ""}${change.toFixed(2)}%</strong></div><div class="stat"><div class="muted">Записей цены</div><strong>${history.length}</strong></div></div>
-    <svg class="chart" viewBox="0 0 400 210" preserveAspectRatio="none" role="img" aria-label="График цены ${esc(item.name)}">
-      <path d="M12 30H388 M12 80H388 M12 130H388 M12 190H388" stroke="#293149" stroke-width="1" fill="none" />
-      <polyline points="${points}" fill="none" stroke="${change >= 0 ? "#65e4aa" : "#ff8a9a"}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
-    </svg>
-    <p class="muted">Цена меняется автоматически со временем. График показывает сохранённые значения.</p>
-  </div>`;
-}
-function growthPage(selectedId = "") {
-  const selected = items.find(item => item.id === selectedId) || items[0];
-  if (!items.length) return `<h2>Рост цен</h2><p class="muted">Пока нет предметов для отслеживания.</p>`;
-  return `<h2>Рост цен предметов</h2><p class="muted">Выбери предмет, чтобы посмотреть динамику стоимости.</p>
-    <div class="grid">${items.map(item => `<article class="card"><div class="art">${esc(item.icon || "💎")}</div><h3>${esc(item.name)}</h3><div class="price">${money(item.price)}</div><button data-growth="${esc(item.id)}">Открыть график</button></article>`).join("")}</div>
-    <section class="box" style="margin-top:20px"><div class="row"><div class="art" style="width:90px;height:90px;margin:0">${esc(selected.icon || "💎")}</div><div><h2 style="margin:0">${esc(selected.name)}</h2><p class="muted">${esc(selected.rarity || "collectible")}</p></div></div>${growthChart(selected)}</section>`;
-}
-function caseCard(c) {
-  return `
-    <article class="card">
-      <div class="art">${esc(c.icon || "📦")}</div>
-      <h3>${esc(c.name)}</h3>
-      <p>${esc(c.desc || c.description || "Коллекционный кейс")}</p>
-      <div class="price">${money(c.price)}</div>
-      <button data-open="${esc(c.id)}">Открыть кейс</button>
-    </article>`;
-}
-function render() {
-  if (!user || !profile) return authScreen();
-  let content = "";
-  if (page === "cases") {
-    content = `<section class="hero">
-      <div class="muted">COLLECT · OPEN · TRADE</div>
-      <h1>Поймай легендарный дроп</h1>
-      <p>Открывай кейсы, собирай коллекцию и продавай предметы.</p>
-    </section><h2>Кейсы</h2><div class="grid">
-      ${cases.map(caseCard).join("") || "Кейсов пока нет"}
-    </div>`;
-  }
-  if (page === "growth") {
-    content = growthPage();
-  }
-  if (page === "inventory") {
-    content = `<h2>Мой инвентарь</h2><div class="grid">
-      ${inventory.map(entry => entry.items
-        ? itemCard({ ...entry.items, inventoryId: entry.id }, true)
-        : "").join("") || "Инвентарь пуст"}
-    </div>`;
-  }
-  if (page === "admin" && profile.role === "admin") content = adminPage();
-
-  app.innerHTML = header() + `<main>${content}
-    <p class="muted">DROPZONE · Все предметы и монеты виртуальные.</p>
-  </main>`;
-
-  app.querySelectorAll("[data-page]").forEach(button => {
-    button.onclick = () => { page = button.dataset.page; render(); };
-  });
-  document.querySelector("#logout").onclick = async () => {
-    try { await api("logout"); } catch {}
-    user = profile = null;
-    inventory = [];
-    authScreen();
+    inventory: Array.isArray(user.inventory) ? user.inventory : []
   };
-  app.querySelectorAll("[data-open]").forEach(button => {
-    button.onclick = () => openCase(button.dataset.open);
-  });
-  app.querySelectorAll("[data-buy]").forEach(button => {
-    button.onclick = () => buyItem(button.dataset.buy);
-  });
-  app.querySelectorAll("[data-sell]").forEach(button => {
-    button.onclick = () => sellItem(button.dataset.sell);
-  });
-  app.querySelectorAll("[data-detail]").forEach(button => {
-    button.onclick = () => { page = "growth"; render(); showGrowthItem(button.dataset.detail); };
-  });
-  app.querySelectorAll("[data-growth]").forEach(button => {
-    button.onclick = () => showGrowthItem(button.dataset.growth);
-  });
-  wireAdmin();
 }
-async function buyItem(id) {
-  try {
-    await api("buy_item", { item_id: id });
-    await refresh(); render(); msg("предмет куплен");
-  } catch (e) { msg(e.message); }
+
+async function refresh({quiet = false} = {}) {
+  const result = await api("state");
+  if (result.user) state.user = normalizeUser(result.user);
+  if (Array.isArray(result.items)) state.items = result.items;
+  if (Array.isArray(result.cases)) state.cases = result.cases;
+
+  $("#balance").textContent = state.user ? money(state.user.balance) : "—";
+  $("#auth").hidden = !!state.user;
+  $("#app").hidden = !state.user;
+
+  if (state.user && !state.spinning) render();
+  return result;
 }
-async function sellItem(id) {
-  try {
-    await api("sell_item", { inventory_id: Number(id) });
-    await refresh(); render(); msg("предмет продан");
-  } catch (e) { msg(e.message); }
+
+function itemFor(id) {
+  return state.items.find(item => String(item.id) === String(id));
 }
-async function openCase(id) {
-  if (spinning) return;
-  spinning = true;
+
+function itemEmoji(item) {
+  return item?.emoji || item?.icon || "🎁";
+}
+
+function showEmpty(message) {
+  return `<div class="empty">${escapeHTML(message)}</div>`;
+}
+
+function renderCases() {
+  $("#content").innerHTML = `
+    <h1>кейсы</h1>
+    <p>выбирай кейс и получай виртуальные предметы</p>
+    <div class="grid" id="caseGrid"></div>
+  `;
+
+  const grid = $("#caseGrid");
+  if (!state.cases.length) {
+    grid.innerHTML = showEmpty("сейчас кейсов нет");
+    return;
+  }
+
+  grid.innerHTML = state.cases.map(c => `
+    <article class="card">
+      <div class="emoji">${escapeHTML(c.emoji || "📦")}</div>
+      <span class="pill">DROPZONE CASE</span>
+      <h3>${escapeHTML(c.name || "Кейс")}</h3>
+      <p>${escapeHTML(c.description || "виртуальные предметы")}</p>
+      <div class="price">${money(c.price)} монет</div>
+      <button data-open-case="${escapeHTML(c.id)}">Открыть кейс</button>
+    </article>
+  `).join("");
+}
+
+function renderInventory() {
+  $("#content").innerHTML = `
+    <h1>инвентарь</h1>
+    <p>твои предметы и их текущая стоимость</p>
+    <div class="grid" id="inventoryGrid"></div>
+  `;
+
+  const grid = $("#inventoryGrid");
+  const inventory = state.user?.inventory || [];
+
+  if (!inventory.length) {
+    grid.innerHTML = showEmpty("инвентарь пустой — открой кейс");
+    return;
+  }
+
+  grid.innerHTML = inventory.map((id, index) => {
+    const item = itemFor(id);
+    if (!item) {
+      return `<article class="card">
+        <div class="emoji">🎁</div>
+        <h3>Предмет #${index + 1}</h3>
+        <p>данные предмета недоступны</p>
+      </article>`;
+    }
+
+    return `<article class="card">
+      <div class="emoji">${escapeHTML(itemEmoji(item))}</div>
+      <h3>${escapeHTML(item.name || "Предмет")}</h3>
+      <span class="pill">В инвентаре</span>
+      <div class="price">${money(item.price)} монет</div>
+      <button data-sell="${index}">Продать за ${money(Math.floor((Number(item.price) || 0) * .6))}</button>
+    </article>`;
+  }).join("");
+}
+
+function renderMarket() {
+  $("#content").innerHTML = `
+    <h1>рынок</h1>
+    <p>текущие цены виртуальных предметов</p>
+    <div class="grid" id="marketGrid"></div>
+  `;
+
+  const grid = $("#marketGrid");
+  if (!state.items.length) {
+    grid.innerHTML = showEmpty("предметов пока нет");
+    return;
+  }
+
+  grid.innerHTML = state.items.map(item => `
+    <article class="card">
+      <div class="emoji">${escapeHTML(itemEmoji(item))}</div>
+      <h3>${escapeHTML(item.name || "Предмет")}</h3>
+      <div class="price">${money(item.price)} монет</div>
+      <p>цена обновляется сервером</p>
+    </article>
+  `).join("");
+}
+
+function renderProfile() {
+  const user = state.user || {};
+  $("#content").innerHTML = `
+    <h1>профиль</h1>
+    <div class="card">
+      <p>игрок</p>
+      <h2>${escapeHTML(user.username || user.name || "Игрок")}</h2>
+      <p>баланс: <strong>${money(user.balance)} монет</strong></p>
+      <p>предметов: <strong>${(user.inventory || []).length}</strong></p>
+      <button id="profileRefresh" class="secondary">Обновить данные</button>
+    </div>
+  `;
+}
+
+function render() {
+  if (!state.user) return;
+
+  document.querySelectorAll("nav [data-page]").forEach(button => {
+    button.classList.toggle("active", button.dataset.page === state.page);
+  });
+
+  if (state.page === "inventory") renderInventory();
+  else if (state.page === "market") renderMarket();
+  else if (state.page === "profile") renderProfile();
+  else renderCases();
+}
+
+async function runAction(action, data) {
+  if (state.busy) return null;
+  state.busy = true;
+
   try {
-    const result = await api("open_case", { case_id: id });
-    const winner = result.item;
-    if (!winner || !winner.id) throw new Error("Сервер не вернул выпавший предмет");
-    await refresh();
-    const pool = items.filter(item => item && item.id);
-    if (!pool.length) throw new Error("Нет предметов для рулетки");
-    const reel = Array.from({ length: 41 }, () => pool[Math.floor(Math.random() * pool.length)]);
-    const winnerIndex = 32;
-    reel[winnerIndex] = items.find(item => item.id === winner.id) || winner;
-    modal.classList.remove("hidden");
-    modal.innerHTML = `
-      <div class="modalbox">
-        <div class="muted">OPENING CASE</div>
-        <h2>Твой дроп</h2>
-        <div class="reel" id="reel"><div class="track" id="track">
-          ${reel.map((item, index) => `<div class="reelitem ${index === winnerIndex ? "winner" : ""}" ${index === winnerIndex ? 'id="reelWinner"' : ""}><span>${esc(item.icon || "💎")}</span><small>${esc(item.name || "Предмет")}</small></div>`).join("")}
-        </div></div>
-        <h2 id="win" class="hidden">${esc(winner.name)}</h2>
-        <p id="winPrice" class="price hidden">${money(winner.price)}</p>
-        <button id="claim" class="hidden">Забрать предмет</button>
-      </div>`;
-    const track = document.querySelector("#track");
-    const reelBox = document.querySelector("#reel");
-    const winnerTile = document.querySelector("#reelWinner");
-    requestAnimationFrame(() => {
-      const target = winnerTile.offsetLeft + winnerTile.offsetWidth / 2 - reelBox.clientWidth / 2;
-      track.style.transition = "none";
-      track.style.transform = "translateX(0)";
-      void track.offsetWidth;
-      track.style.transition = "transform 5s cubic-bezier(.08,.72,.08,1)";
-      track.style.transform = `translateX(-${Math.max(0, target)}px)`;
-    });
-    clearTimeout(spinTimer);
-    spinTimer = setTimeout(() => {
-      document.querySelector("#win")?.classList.remove("hidden");
-      document.querySelector("#winPrice")?.classList.remove("hidden");
-      const claim = document.querySelector("#claim");
-      if (!claim) return;
-      claim.classList.remove("hidden");
-      claim.onclick = async () => {
-        modal.classList.add("hidden");
-        clearTimeout(spinTimer);
-        try {
-          await refresh();
-          page = "inventory";
-          render();
-          msg("предмет добавлен в инвентарь");
-        } catch (error) {
-          msg(error.message || "Не удалось обновить инвентарь");
-        } finally {
-          spinning = false;
-        }
-      };
-    }, 5200);
-  } catch (e) {
-    spinning = false;
-    msg(e.message || "Не удалось открыть кейс");
+    return await api(action, data);
+  } catch (error) {
+    notify(error.message || "что-то пошло не так");
+    return null;
+  } finally {
+    state.busy = false;
   }
 }
-function adminPage() {
-  return `
-    <h2>Админ-панель</h2>
-    <section class="box">
-      <h3>Добавить предмет</h3>
-      <form id="newItem" class="field">
-        <input name="name" placeholder="Название" required maxlength="45">
-        <input name="icon" placeholder="Эмодзи" value="💎" required maxlength="8">
-        <select name="rarity">
-          <option value="common">common</option><option value="uncommon">uncommon</option>
-          <option value="rare">rare</option><option value="epic">epic</option><option value="legendary">legendary</option>
-        </select>
-        <input name="price" type="number" min="1" max="100000000" placeholder="Цена" required>
-        <button>Добавить предмет</button>
-      </form>
-    </section>
-    <section class="box" style="margin-top:18px">
-      <h3>Создать кейс</h3>
-      <form id="newCase" class="field">
-        <input name="name" placeholder="Название кейса" required maxlength="45">
-        <input name="icon" value="📦" required maxlength="8">
-        <input name="description" placeholder="Описание" maxlength="100">
-        <input name="price" type="number" min="1" max="100000000" placeholder="Цена открытия" required>
-        <button>Создать кейс</button>
-      </form>
-    </section>
-    <h2 style="margin-top:28px">Предметы</h2>
-    <div class="box tablewrap"><table><thead><tr><th>Предмет</th><th>Цена</th><th>Действия</th></tr></thead>
-    <tbody>${items.map(item => `<tr>
-      <td>${esc(item.icon)} ${esc(item.name)}</td><td>${money(item.price)}</td><td class="row">
-        <button data-edit-price="${esc(item.id)}">Цена</button>
-        <button data-delete-item="${esc(item.id)}" class="secondary">Удалить</button>
-      </td></tr>`).join("")}</tbody></table></div>
-    <h2 style="margin-top:28px">Кейсы</h2>
-    <div class="box tablewrap"><table><thead><tr><th>Кейс</th><th>Цена</th><th>Действия</th></tr></thead>
-    <tbody>${cases.map(c => `<tr>
-      <td>${esc(c.icon)} ${esc(c.name)}</td><td>${money(c.price)}</td><td class="row">
-        <button data-edit-case="${esc(c.id)}">Цена</button>
-        <button data-delete-case="${esc(c.id)}" class="secondary">Удалить</button>
-      </td></tr>`).join("")}</tbody></table></div>`;
+
+async function login(register) {
+  const username = $("#authName").value.trim();
+  const password = $("#authPassword").value;
+
+  if (!username || !password) {
+    notify("введи логин и пароль");
+    return;
+  }
+
+  const result = await runAction(register ? "register" : "login", {
+    username, password
+  });
+
+  if (!result) return;
+
+  try {
+    await refresh();
+    notify(register ? "аккаунт создан" : "ты вошёл в аккаунт");
+  } catch (error) {
+    notify(error.message || "не удалось загрузить данные");
+  }
 }
-function wireAdmin() {
-  if (profile?.role !== "admin") return;
-  document.querySelector("#newItem")?.addEventListener("submit", async e => {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    try {
-      await api("admin_create_item", {
-        name: f.get("name"), icon: f.get("icon"),
-        rarity: f.get("rarity"), price: Number(f.get("price"))
-      });
-      await refresh(); render(); msg("предмет создан");
-    } catch (err) { msg(err.message); }
-  });
-  document.querySelector("#newCase")?.addEventListener("submit", async e => {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    try {
-      await api("admin_create_case", {
-        name: f.get("name"), icon: f.get("icon"),
-        description: f.get("description"), price: Number(f.get("price"))
-      });
-      await refresh(); render(); msg("кейс создан");
-    } catch (err) { msg(err.message); }
-  });
-  document.querySelectorAll("[data-delete-item]").forEach(b => b.onclick = async () => {
-    if (!confirm("Удалить предмет?")) return;
-    try {
-      await api("admin_delete_item", { id: b.dataset.deleteItem });
-      await refresh(); render(); msg("предмет удалён у всех");
-    } catch (e) { msg(e.message); }
-  });
-  document.querySelectorAll("[data-delete-case]").forEach(b => b.onclick = async () => {
-    if (!confirm("Удалить кейс у всех пользователей?")) return;
-    try {
-      await api("admin_delete_case", { id: b.dataset.deleteCase });
-      await refresh(); render(); msg("кейс удалён у всех");
-    } catch (e) { msg(e.message); }
-  });
-  document.querySelectorAll("[data-edit-price]").forEach(b => b.onclick = async () => {
-    const value = prompt("Новая цена предмета");
-    if (value === null) return;
-    try {
-      await api("admin_update_item", { id: b.dataset.editPrice, price: Number(value) });
-      await refresh(); render(); msg("цена изменена");
-    } catch (e) { msg(e.message); }
-  });
-  document.querySelectorAll("[data-edit-case]").forEach(b => b.onclick = async () => {
-    const value = prompt("Новая цена кейса");
-    if (value === null) return;
-    try {
-      await api("admin_update_case", { id: b.dataset.editCase, price: Number(value) });
-      await refresh(); render(); msg("цена кейса изменена");
-    } catch (e) { msg(e.message); }
-  });
+
+function closeModal() {
+  if (state.spinning) return;
+  $("#modal").classList.remove("show");
+  state.pendingWinner = null;
 }
+
+function makeTile(item) {
+  const tile = document.createElement("div");
+  tile.className = "reelitem";
+
+  const emoji = document.createElement("div");
+  emoji.className = "emoji";
+  emoji.textContent = itemEmoji(item);
+
+  const name = document.createElement("small");
+  name.textContent = item?.name || "Предмет";
+
+  tile.append(emoji, name);
+  return tile;
+}
+
+async function openCase(caseId) {
+  if (state.busy || state.spinning) return;
+
+  const chosenCase = state.cases.find(c => String(c.id) === String(caseId));
+  if (!chosenCase) {
+    notify("этот кейс больше недоступен");
+    return;
+  }
+
+  state.busy = true;
+  state.spinning = true;
+  state.pendingWinner = null;
+
+  $("#modal").classList.add("show");
+  $("#modalTitle").textContent = chosenCase.name || "Открытие кейса";
+  $("#modalText").textContent = "получаем результат с сервера...";
+  $("#winnerName").textContent = "";
+  $("#winnerPrice").textContent = "";
+  $("#claimBtn").hidden = true;
+  $("#closeModalBtn").disabled = true;
+
+  const track = $("#track");
+  track.replaceChildren();
+  track.style.transition = "none";
+  track.style.transform = "translateX(0px)";
+
+  try {
+    const result = await api("open_case", { case_id: chosenCase.id });
+    const winnerId = result.item?.id ?? result.itemId ?? result.item_id;
+    const winner = result.item || itemFor(winnerId);
+
+    if (!winner) {
+      await refresh({quiet: true});
+      throw new Error("сервер не вернул выигранный предмет");
+    }
+
+    const pool = state.items.length ? state.items : [winner];
+    const tiles = [];
+
+    for (let i = 0; i < 45; i++) {
+      const item = i === 38 ? winner : pool[Math.floor(Math.random() * pool.length)];
+      const tile = makeTile(item);
+      track.appendChild(tile);
+      tiles.push(tile);
+    }
+
+    await new Promise(resolve => requestAnimationFrame(() =>
+      requestAnimationFrame(resolve)
+    ));
+
+    const reel = $("#reel");
+    const winningTile = tiles[38];
+    const reelRect = reel.getBoundingClientRect();
+    const tileRect = winningTile.getBoundingClientRect();
+
+    const delta = tileRect.left + tileRect.width / 2
+      - (reelRect.left + reelRect.width / 2);
+
+    track.style.transition = "none";
+    track.style.transform = "translateX(0px)";
+    void track.offsetWidth;
+
+    track.style.transition = "transform 4.5s cubic-bezier(.08,.72,.08,1)";
+    track.style.transform = `translateX(${-delta}px)`;
+
+    $("#modalText").textContent = "кейс открывается...";
+    await new Promise(resolve => {
+      track.addEventListener("transitionend", resolve, {once: true});
+      setTimeout(resolve, 5200);
+    });
+
+    state.pendingWinner = winner;
+    $("#modalTitle").textContent = "предмет получен";
+    $("#modalText").textContent = "предмет уже добавлен на сервере";
+    $("#winnerName").textContent = winner.name || "Предмет";
+    $("#winnerPrice").textContent = `${money(winner.price)} монет`;
+    $("#claimBtn").hidden = false;
+    $("#closeModalBtn").disabled = false;
+
+    await refresh({quiet: true});
+  } catch (error) {
+    $("#modalTitle").textContent = "ошибка";
+    $("#modalText").textContent = error.message || "не удалось открыть кейс";
+    $("#closeModalBtn").disabled = false;
+    notify(error.message || "не удалось открыть кейс");
+  } finally {
+    state.busy = false;
+    state.spinning = false;
+  }
+}
+
+async function sellItem(index) {
+  if (state.busy) return;
+
+  const inventory = state.user?.inventory || [];
+  if (index < 0 || index >= inventory.length) {
+    notify("предмет уже отсутствует в инвентаре");
+    await refresh({quiet: true});
+    return;
+  }
+
+  const result = await runAction("sell_item", { inventory_id: index });
+  if (!result) {
+    try { await refresh({quiet: true}); } catch {}
+    return;
+  }
+
+  try {
+    await refresh({quiet: true});
+    state.page = "inventory";
+    render();
+    notify(`предмет продан · +${money(result.payout)} монет`);
+  } catch (error) {
+    notify("продажа выполнена, но данные не обновились: " + error.message);
+  }
+}
+
+document.querySelectorAll("nav [data-page]").forEach(button => {
+  button.addEventListener("click", () => {
+    state.page = button.dataset.page;
+    render();
+  });
+});
+
+$("#loginBtn").addEventListener("click", () => login(false));
+$("#registerBtn").addEventListener("click", () => login(true));
+$("#logoutBtn").addEventListener("click", async () => {
+  await runAction("logout");
+  state.user = null;
+  state.items = [];
+  state.cases = [];
+  $("#auth").hidden = false;
+  $("#app").hidden = true;
+});
+
+$("#content").addEventListener("click", async event => {
+  const openButton = event.target.closest("[data-open-case]");
+  if (openButton) {
+    await openCase(openButton.dataset.openCase);
+    return;
+  }
+
+  const sellButton = event.target.closest("[data-sell]");
+  if (sellButton) {
+    await sellItem(Number(sellButton.dataset.sell));
+    return;
+  }
+
+  if (event.target.closest("#profileRefresh")) {
+    try {
+      await refresh();
+      notify("данные обновлены");
+    } catch (error) {
+      notify(error.message || "не удалось обновить данные");
+    }
+  }
+});
+
+$("#claimBtn").addEventListener("click", async () => {
+  if (!state.pendingWinner) return;
+  $("#modal").classList.remove("show");
+  state.pendingWinner = null;
+  state.page = "inventory";
+
+  try {
+    await refresh({quiet: true});
+    render();
+  } catch (error) {
+    notify(error.message || "не удалось обновить инвентарь");
+  }
+});
+
+$("#closeModalBtn").addEventListener("click", closeModal);
+
+$("#modal").addEventListener("click", event => {
+  if (event.target === $("#modal")) closeModal();
+});
+
+document.addEventListener("visibilitychange", async () => {
+  if (!document.hidden && state.user && !state.busy && !state.spinning) {
+    try { await refresh({quiet: true}); } catch {}
+  }
+});
+
 async function boot() {
   try {
     await refresh();
-    if (!user || !profile) return authScreen();
-    page = profile.role === "admin" ? "admin" : "cases";
-    render();
-  } catch (e) {
-    app.innerHTML = `<main><section class="box">
-      <h2>Не удалось загрузить сайт</h2><p>${esc(e.message)}</p>
-      <button onclick="location.reload()">Повторить</button>
-    </section></main>`;
+  } catch {
+    $("#balance").textContent = "—";
+    $("#auth").hidden = false;
+    $("#app").hidden = true;
+    notify("не удалось загрузить сайт. проверь подключение к серверу");
   }
+
+  setInterval(async () => {
+    if (document.hidden || !state.user || state.busy || state.spinning) return;
+
+    try {
+      const before = JSON.stringify({
+        balance: state.user?.balance,
+        inventory: state.user?.inventory,
+        items: state.items,
+        cases: state.cases
+      });
+
+      await refresh({quiet: true});
+
+      const after = JSON.stringify({
+        balance: state.user?.balance,
+        inventory: state.user?.inventory,
+        items: state.items,
+        cases: state.cases
+      });
+
+      if (before !== after) render();
+    } catch {
+      // временная ошибка сети не должна ломать интерфейс
+    }
+  }, 7000);
 }
+
 boot();
 </script>
 </body>
