@@ -53,23 +53,7 @@ th{color:var(--muted)}
 <div id="message"></div>
 <div id="modal" class="hidden"></div>
 
-<script type="module">
-import { createClient } from
-  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-/* Вставь значения из Supabase → Project Settings → API */
-const SUPABASE_URL = "https://zydxlzidygqyurnyujik.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_hkKOTSkI3BfmTYkz2mUBHw_m0EpsLpY";
-
-const configured =
-  SUPABASE_URL.startsWith("https://") &&
-  !SUPABASE_URL.includes("ВСТАВЬ_") &&
-  !SUPABASE_ANON_KEY.includes("ВСТАВЬ_");
-
-const supabase = configured
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
-
+<script>
 const app = document.querySelector("#app");
 const modal = document.querySelector("#modal");
 let user = null;
@@ -85,11 +69,9 @@ function esc(value) {
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   })[c]);
 }
-
 function money(value) {
   return Math.floor(Number(value) || 0).toLocaleString("ru-RU") + " ₵";
 }
-
 function msg(text) {
   const el = document.querySelector("#message");
   el.textContent = text;
@@ -98,59 +80,61 @@ function msg(text) {
   msg.timer = setTimeout(() => el.style.display = "none", 3000);
 }
 
+/* Все запросы идут в Netlify Function. Авторизация хранится в HttpOnly cookie. */
 async function api(action, data = {}) {
-  const { data: result } = await supabase.auth.getSession();
-  const token = result.session?.access_token;
-
-  const response = await fetch("/.netlify/functions/game", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify({ action, ...data })
-  });
-
+  const actionMap = {
+    open_case: "open-case",
+    buy_item: "buy-item",
+    sell_item: "sell-item",
+    admin_create_item: "create-item",
+    admin_create_case: "create-case",
+    admin_delete_item: "delete-item",
+    admin_delete_case: "delete-case",
+    admin_update_item: "update-item",
+    admin_update_case: "update-case"
+  };
+  const keyMap = {
+    case_id: "caseId",
+    item_id: "itemId",
+    inventory_id: "index",
+    description: "desc"
+  };
+  const payload = {};
+  for (const [key, value] of Object.entries(data)) {
+    payload[keyMap[key] || key] = value;
+  }
+  const serverAction = actionMap[action] || action;
+  const method = action === "state" ? "GET" : "POST";
+  const response = await fetch(
+    `/.netlify/functions/game?action=${encodeURIComponent(serverAction)}`,
+    {
+      method,
+      credentials: "same-origin",
+      headers: method === "POST" ? { "Content-Type": "application/json" } : {},
+      ...(method === "POST" ? { body: JSON.stringify(payload) } : {})
+    }
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || "Ошибка сервера");
   return body;
 }
 
 async function refresh() {
-  if (!supabase) return;
-
-  const { data: auth } = await supabase.auth.getUser();
-  user = auth.user || null;
-  profile = null;
-  inventory = [];
-
-  const [itemResult, caseResult] = await Promise.all([
-    supabase.from("items").select("*").eq("active", true).order("created_at"),
-    supabase.from("cases").select("*").eq("active", true).order("created_at")
-  ]);
-
-  if (itemResult.error) throw itemResult.error;
-  if (caseResult.error) throw caseResult.error;
-
-  items = itemResult.data || [];
-  cases = caseResult.data || [];
-
-  if (user) {
-    const p = await supabase.from("profiles")
-      .select("username,balance,role")
-      .eq("id", user.id).single();
-
-    if (p.error) throw p.error;
-    profile = p.data;
-
-    const inv = await supabase.from("inventory")
-      .select("id,item_id,created_at,items(*)")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (inv.error) throw inv.error;
-    inventory = inv.data || [];
-  }
+  const state = await api("state");
+  items = Array.isArray(state.items) ? state.items : [];
+  cases = Array.isArray(state.cases) ? state.cases : [];
+  user = state.user || (state.isAdmin ? { username: "admin", balance: 0, inventory: [] } : null);
+  profile = user ? {
+    username: user.username,
+    balance: Number(user.balance) || 0,
+    role: state.isAdmin ? "admin" : "user"
+  } : null;
+  inventory = user && Array.isArray(user.inventory)
+    ? user.inventory.map((itemId, index) => ({
+        id: String(index),
+        items: items.find(item => item.id === itemId) || null
+      })).filter(entry => entry.items)
+    : [];
 }
 
 function authScreen() {
@@ -162,47 +146,44 @@ function authScreen() {
         <form id="authForm">
           <div class="field">
             <label>Имя пользователя</label>
-            <input name="username" required minlength="3" maxlength="20"
+            <input name="username" minlength="3" maxlength="20"
               pattern="[a-zA-Z0-9_-]+" autocomplete="username">
-          </div>
-          <div class="field">
-            <label>Email</label>
-            <input name="email" type="email" required autocomplete="email">
           </div>
           <div class="field">
             <label>Пароль</label>
             <input name="password" type="password" required minlength="8"
-              autocomplete="current-password">
+              maxlength="100" autocomplete="current-password">
           </div>
           <div class="row">
             <button type="submit" data-mode="login">Войти</button>
             <button type="submit" data-mode="register" class="secondary">Регистрация</button>
+            <button type="submit" data-mode="admin" class="secondary">Админ</button>
           </div>
         </form>
-        <p class="muted">Не используй пароль от своих личных аккаунтов.</p>
+        <p class="muted">Для аккаунта используй отдельный пароль, не от личной почты.</p>
       </section>
     </main>`;
 
   document.querySelector("#authForm").addEventListener("submit", async e => {
     e.preventDefault();
-    const mode = e.submitter.dataset.mode;
+    const mode = e.submitter?.dataset.mode || "login";
     const form = new FormData(e.currentTarget);
-    const username = String(form.get("username")).trim();
-    const email = String(form.get("email")).trim().toLowerCase();
-    const password = String(form.get("password"));
-
+    const username = String(form.get("username") || "").trim();
+    const password = String(form.get("password") || "");
+    if (mode !== "admin" && !/^[a-zA-Z0-9_-]{3,20}$/.test(username)) {
+      msg("имя пользователя: 3–20 символов, только латиница, цифры, _ или -");
+      return;
+    }
     try {
       if (mode === "register") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { username } }
-        });
-        if (error) throw error;
-        msg("Регистрация отправлена. Если требуется, подтверди email.");
+        await api("register", { username, password });
+        await boot();
+        msg("аккаунт создан");
+      } else if (mode === "login") {
+        await api("login", { username, password });
+        await boot();
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await api("admin-login", { password });
         await boot();
       }
     } catch (error) {
@@ -240,21 +221,18 @@ function itemCard(item, owned = false) {
         : `<button data-buy="${esc(item.id)}">Купить</button>`}
     </article>`;
 }
-
 function caseCard(c) {
   return `
     <article class="card">
       <div class="art">${esc(c.icon || "📦")}</div>
       <h3>${esc(c.name)}</h3>
-      <p>${esc(c.description || "Коллекционный кейс")}</p>
+      <p>${esc(c.desc || c.description || "Коллекционный кейс")}</p>
       <div class="price">${money(c.price)}</div>
       <button data-open="${esc(c.id)}">Открыть кейс</button>
     </article>`;
 }
-
 function render() {
   if (!user || !profile) return authScreen();
-
   let content = "";
   if (page === "cases") {
     content = `<section class="hero">
@@ -265,13 +243,11 @@ function render() {
       ${cases.map(caseCard).join("") || "Кейсов пока нет"}
     </div>`;
   }
-
   if (page === "market") {
     content = `<h2>Маркет</h2><div class="grid">
       ${items.map(item => itemCard(item)).join("") || "Предметов пока нет"}
     </div>`;
   }
-
   if (page === "inventory") {
     content = `<h2>Мой инвентарь</h2><div class="grid">
       ${inventory.map(entry => entry.items
@@ -279,75 +255,54 @@ function render() {
         : "").join("") || "Инвентарь пуст"}
     </div>`;
   }
-
-  if (page === "admin" && profile.role === "admin") {
-    content = adminPage();
-  }
+  if (page === "admin" && profile.role === "admin") content = adminPage();
 
   app.innerHTML = header() + `<main>${content}
     <p class="muted">DROPZONE · Все предметы и монеты виртуальные.</p>
   </main>`;
 
   app.querySelectorAll("[data-page]").forEach(button => {
-    button.onclick = () => {
-      page = button.dataset.page;
-      render();
-    };
+    button.onclick = () => { page = button.dataset.page; render(); };
   });
-
   document.querySelector("#logout").onclick = async () => {
-    await supabase.auth.signOut();
+    try { await api("logout"); } catch {}
     user = profile = null;
+    inventory = [];
     authScreen();
   };
-
   app.querySelectorAll("[data-open]").forEach(button => {
     button.onclick = () => openCase(button.dataset.open);
   });
-
   app.querySelectorAll("[data-buy]").forEach(button => {
     button.onclick = () => buyItem(button.dataset.buy);
   });
-
   app.querySelectorAll("[data-sell]").forEach(button => {
     button.onclick = () => sellItem(button.dataset.sell);
   });
-
   wireAdmin();
 }
-
 async function buyItem(id) {
   try {
     await api("buy_item", { item_id: id });
-    await refresh();
-    render();
-    msg("Предмет куплен");
+    await refresh(); render(); msg("предмет куплен");
   } catch (e) { msg(e.message); }
 }
-
 async function sellItem(id) {
   try {
-    await api("sell_item", { inventory_id: id });
-    await refresh();
-    render();
-    msg("Предмет продан");
+    await api("sell_item", { inventory_id: Number(id) });
+    await refresh(); render(); msg("предмет продан");
   } catch (e) { msg(e.message); }
 }
-
 async function openCase(id) {
   if (spinning) return;
   spinning = true;
-
   try {
-    /* Сервер сам выбирает дроп и сохраняет результат */
     const result = await api("open_case", { case_id: id });
     await refresh();
-
     const winner = result.item;
     const reel = Array.from({ length: 32 }, (_, i) =>
       items[i % Math.max(1, items.length)]).filter(Boolean);
     reel[27] = winner;
-
     modal.classList.remove("hidden");
     modal.innerHTML = `
       <div class="modalbox">
@@ -360,18 +315,18 @@ async function openCase(id) {
         <p id="winPrice" class="price hidden">${money(winner.price)}</p>
         <button id="claim" class="hidden">Забрать предмет</button>
       </div>`;
-
     const track = document.querySelector("#track");
     requestAnimationFrame(() => {
       track.style.transition = "transform 4.5s cubic-bezier(.08,.72,.08,1)";
       track.style.transform = `translateX(-${27 * 113 - 110}px)`;
     });
-
     setTimeout(() => {
-      document.querySelector("#win").classList.remove("hidden");
-      document.querySelector("#winPrice").classList.remove("hidden");
-      document.querySelector("#claim").classList.remove("hidden");
-      document.querySelector("#claim").onclick = () => {
+      document.querySelector("#win")?.classList.remove("hidden");
+      document.querySelector("#winPrice")?.classList.remove("hidden");
+      const claim = document.querySelector("#claim");
+      if (!claim) return;
+      claim.classList.remove("hidden");
+      claim.onclick = () => {
         modal.classList.add("hidden");
         spinning = false;
         page = "inventory";
@@ -383,18 +338,17 @@ async function openCase(id) {
     msg(e.message);
   }
 }
-
 function adminPage() {
   return `
     <h2>Админ-панель</h2>
     <section class="box">
       <h3>Добавить предмет</h3>
       <form id="newItem" class="field">
-        <input name="name" placeholder="Название" required maxlength="60">
-        <input name="icon" placeholder="Эмодзи" value="💎" required maxlength="10">
+        <input name="name" placeholder="Название" required maxlength="45">
+        <input name="icon" placeholder="Эмодзи" value="💎" required maxlength="8">
         <select name="rarity">
-          <option>common</option><option>uncommon</option>
-          <option>rare</option><option>epic</option><option>legendary</option>
+          <option value="common">common</option><option value="uncommon">uncommon</option>
+          <option value="rare">rare</option><option value="epic">epic</option><option value="legendary">legendary</option>
         </select>
         <input name="price" type="number" min="1" max="100000000" placeholder="Цена" required>
         <button>Добавить предмет</button>
@@ -403,18 +357,17 @@ function adminPage() {
     <section class="box" style="margin-top:18px">
       <h3>Создать кейс</h3>
       <form id="newCase" class="field">
-        <input name="name" placeholder="Название кейса" required maxlength="60">
-        <input name="icon" value="📦" required maxlength="10">
-        <input name="description" placeholder="Описание" maxlength="200">
-        <input name="price" type="number" min="1" placeholder="Цена открытия" required>
+        <input name="name" placeholder="Название кейса" required maxlength="45">
+        <input name="icon" value="📦" required maxlength="8">
+        <input name="description" placeholder="Описание" maxlength="100">
+        <input name="price" type="number" min="1" max="100000000" placeholder="Цена открытия" required>
         <button>Создать кейс</button>
       </form>
     </section>
     <h2 style="margin-top:28px">Предметы</h2>
     <div class="box tablewrap"><table><thead><tr><th>Предмет</th><th>Цена</th><th>Действия</th></tr></thead>
     <tbody>${items.map(item => `<tr>
-      <td>${esc(item.icon)} ${esc(item.name)}</td>
-      <td>${money(item.price)}</td><td class="row">
+      <td>${esc(item.icon)} ${esc(item.name)}</td><td>${money(item.price)}</td><td class="row">
         <button data-edit-price="${esc(item.id)}">Цена</button>
         <button data-delete-item="${esc(item.id)}" class="secondary">Удалить</button>
       </td></tr>`).join("")}</tbody></table></div>
@@ -422,14 +375,12 @@ function adminPage() {
     <div class="box tablewrap"><table><thead><tr><th>Кейс</th><th>Цена</th><th>Действия</th></tr></thead>
     <tbody>${cases.map(c => `<tr>
       <td>${esc(c.icon)} ${esc(c.name)}</td><td>${money(c.price)}</td><td class="row">
-      <button data-edit-case="${esc(c.id)}">Цена</button>
-      <button data-delete-case="${esc(c.id)}" class="secondary">Удалить</button>
+        <button data-edit-case="${esc(c.id)}">Цена</button>
+        <button data-delete-case="${esc(c.id)}" class="secondary">Удалить</button>
       </td></tr>`).join("")}</tbody></table></div>`;
 }
-
 function wireAdmin() {
   if (profile?.role !== "admin") return;
-
   document.querySelector("#newItem")?.addEventListener("submit", async e => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -438,10 +389,9 @@ function wireAdmin() {
         name: f.get("name"), icon: f.get("icon"),
         rarity: f.get("rarity"), price: Number(f.get("price"))
       });
-      await refresh(); render(); msg("Предмет создан");
+      await refresh(); render(); msg("предмет создан");
     } catch (err) { msg(err.message); }
   });
-
   document.querySelector("#newCase")?.addEventListener("submit", async e => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -450,62 +400,45 @@ function wireAdmin() {
         name: f.get("name"), icon: f.get("icon"),
         description: f.get("description"), price: Number(f.get("price"))
       });
-      await refresh(); render(); msg("Кейс создан");
+      await refresh(); render(); msg("кейс создан");
     } catch (err) { msg(err.message); }
   });
-
   document.querySelectorAll("[data-delete-item]").forEach(b => b.onclick = async () => {
     if (!confirm("Удалить предмет?")) return;
     try {
-      await api("admin_delete_item", { item_id: b.dataset.deleteItem });
-      await refresh(); render(); msg("Предмет удалён у всех");
+      await api("admin_delete_item", { id: b.dataset.deleteItem });
+      await refresh(); render(); msg("предмет удалён у всех");
     } catch (e) { msg(e.message); }
   });
-
   document.querySelectorAll("[data-delete-case]").forEach(b => b.onclick = async () => {
     if (!confirm("Удалить кейс у всех пользователей?")) return;
     try {
-      await api("admin_delete_case", { case_id: b.dataset.deleteCase });
-      await refresh(); render(); msg("Кейс удалён у всех");
+      await api("admin_delete_case", { id: b.dataset.deleteCase });
+      await refresh(); render(); msg("кейс удалён у всех");
     } catch (e) { msg(e.message); }
   });
-
   document.querySelectorAll("[data-edit-price]").forEach(b => b.onclick = async () => {
     const value = prompt("Новая цена предмета");
     if (value === null) return;
     try {
-      await api("admin_update_item", {
-        item_id: b.dataset.editPrice, price: Number(value)
-      });
-      await refresh(); render(); msg("Цена изменена");
+      await api("admin_update_item", { id: b.dataset.editPrice, price: Number(value) });
+      await refresh(); render(); msg("цена изменена");
     } catch (e) { msg(e.message); }
   });
-
   document.querySelectorAll("[data-edit-case]").forEach(b => b.onclick = async () => {
     const value = prompt("Новая цена кейса");
     if (value === null) return;
     try {
-      await api("admin_update_case", {
-        case_id: b.dataset.editCase, price: Number(value)
-      });
-      await refresh(); render(); msg("Цена кейса изменена");
+      await api("admin_update_case", { id: b.dataset.editCase, price: Number(value) });
+      await refresh(); render(); msg("цена кейса изменена");
     } catch (e) { msg(e.message); }
   });
 }
-
 async function boot() {
-  if (!configured) {
-    app.innerHTML = `<main><section class="box">
-      <h2>Настрой Supabase</h2>
-      <p>Вставь URL проекта и publishable key в начале файла index.html.</p>
-    </section></main>`;
-    return;
-  }
-
   try {
     await refresh();
-    if (!user) return authScreen();
-    page = "cases";
+    if (!user || !profile) return authScreen();
+    page = profile.role === "admin" ? "admin" : "cases";
     render();
   } catch (e) {
     app.innerHTML = `<main><section class="box">
@@ -514,11 +447,6 @@ async function boot() {
     </section></main>`;
   }
 }
-
-supabase?.auth.onAuthStateChange(() => {
-  setTimeout(() => boot(), 0);
-});
-
 boot();
 </script>
 </body>
