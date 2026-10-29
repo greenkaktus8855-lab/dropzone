@@ -49,7 +49,20 @@ th{color:var(--muted)}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app">
+  <main>
+    <section class="box auth">
+      <div class="logo">DROP<span>ZONE</span></div>
+      <p class="muted">Виртуальные предметы и кейсы</p>
+      <form id="authFormFallback" onsubmit="return false">
+        <div class="field"><label>Имя пользователя</label><input name="username" minlength="3" maxlength="20" autocomplete="username" placeholder="например kaktus"></div>
+        <div class="field"><label>Пароль</label><input name="password" type="password" required minlength="8" maxlength="100" autocomplete="current-password" placeholder="не менее 8 символов"></div>
+        <div class="row"><button type="button" onclick="location.reload()">Перезагрузить сайт</button></div>
+      </form>
+      <p class="muted">Если эта заглушка осталась на экране, JavaScript сайта не запустился. Перезагрузи страницу после публикации обновления.</p>
+    </section>
+  </main>
+</div>
 <div id="message"></div>
 <div id="modal" class="hidden"></div>
 
@@ -454,4 +467,32 @@ function wireAdmin() {
     if (value === null) return;
     try {
       await api("admin_update_item", { id: b.dataset.editPrice, price: Number(value) });
-      await refresh(); render(); msg("цен
+      await refresh(); render(); msg("цена изменена");
+    } catch (e) { msg(e.message); }
+  });
+  document.querySelectorAll("[data-edit-case]").forEach(b => b.onclick = async () => {
+    const value = prompt("Новая цена кейса");
+    if (value === null) return;
+    try {
+      await api("admin_update_case", { id: b.dataset.editCase, price: Number(value) });
+      await refresh(); render(); msg("цена кейса изменена");
+    } catch (e) { msg(e.message); }
+  });
+}
+async function boot() {
+  try {
+    await refresh();
+    if (!user || !profile) return authScreen();
+    page = profile.role === "admin" ? "admin" : "cases";
+    render();
+  } catch (e) {
+    app.innerHTML = `<main><section class="box">
+      <h2>Не удалось загрузить сайт</h2><p>${esc(e.message)}</p>
+      <button onclick="location.reload()">Повторить</button>
+    </section></main>`;
+  }
+}
+boot();
+</script>
+</body>
+</html>
