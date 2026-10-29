@@ -159,11 +159,12 @@ function validPrice(value) {
 }
 
 function weightedItem(db, caseData) {
-  // Гарантированная выдача первого доступного предмета без случайной рулетки.
-  // Сохраняем имя функции, чтобы не менять остальную серверную логику.
-  const available = (Array.isArray(caseData.drops) ? caseData.drops : [])
-    .find(drop => db.items.some(item => item.id === drop.itemId));
-  return available ? db.items.find(item => item.id === available.itemId) || null : null;
+  // Результат фиксированный: барабан — только визуальная анимация, без случайного выигрыша.
+  const available = caseData.drops
+    .filter(drop => db.items.some(item => item.id === drop.itemId))
+    .map(drop => db.items.find(item => item.id === drop.itemId))
+    .filter(Boolean);
+  return available[0] || null;
 }
 
 function defaultDatabase() {
@@ -426,6 +427,13 @@ export default async function handler(request) {
 
     if (session.role !== "admin") {
       return json({ error: "Только администратор может это сделать" }, 403);
+    }
+
+    if (action === "reset-accounts") {
+      db.users = [];
+      db.transactions = [];
+      await writeDatabase(store, db);
+      return json({ ok: true, message: "Аккаунты сброшены. Кейсы и предметы сохранены." });
     }
 
     if (action === "update-item") {
