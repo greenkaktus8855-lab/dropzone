@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#176b42">
+<title>Республика Кактусия — официальный портал</title>
+<style>
+:root{--green:#176b42;--deep:#104b30;--light:#eaf5ee;--gold:#d6b45b;--ink:#1d2b23;--muted:#68766d;--paper:#fff;--line:#dce8df}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f5f8f5;color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif;line-height:1.6}
+header{background:linear-gradient(120deg,#104b30,#218653);color:white;padding:16px 6%;position:sticky;top:0;z-index:5;box-shadow:0 4px 18px #0b382322}
+.nav{max-width:1150px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.04em}.mini-flag{width:42px;height:28px;border:1px solid #ffffff88;background:linear-gradient(to bottom,#fff 0 50%,#218653 50%);position:relative}.mini-flag:after{content:"🌵";position:absolute;inset:0;display:grid;place-items:center;font-size:16px;text-shadow:0 1px white}
+nav{display:flex;gap:18px;flex-wrap:wrap}nav a{color:#eaf5ee;text-decoration:none;font-size:14px}nav a:hover{text-decoration:underline}
+.hero{background:linear-gradient(135deg,#e9f5ec,#fff 65%);padding:76px 6% 68px;border-bottom:1px solid var(--line)}.hero-inner{max-width:1150px;margin:auto;display:grid;grid-template-columns:1.25fr .75fr;gap:42px;align-items:center}.eyebrow{color:var(--green);font-weight:800;letter-spacing:.16em;font-size:12px;text-transform:uppercase}.hero h1{font-size:clamp(38px,6vw,68px);line-height:1.04;margin:14px 0;color:var(--deep);letter-spacing:-.04em}.hero p{font-size:18px;color:#52645a;max-width:650px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}.btn{display:inline-block;padding:12px 18px;border-radius:9px;background:var(--green);color:white;text-decoration:none;font-weight:700;border:1px solid var(--green)}.btn.alt{background:white;color:var(--green)}.flag-card{background:white;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 16px 40px #173e2510;text-align:center}.flag{height:180px;border:1px solid #d5e1d8;border-radius:5px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 18px #00000012}.flag div{flex:1}.flag .white{background:#fff;display:grid;place-items:center;font-size:55px}.flag .green{background:#218653}.flag-card strong{display:block;margin-top:16px;color:var(--deep);letter-spacing:.12em}
+main{max-width:1150px;margin:0 auto;padding:54px 6%}.section{margin-bottom:58px;scroll-margin-top:100px}.section h2{font-size:30px;color:var(--deep);margin:0 0 8px}.lead{color:var(--muted);margin-top:0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:white;border:1px solid var(--line);border-radius:14px;padding:21px;box-shadow:0 5px 18px #153b2310}.card .icon{font-size:27px}.card h3{margin:8px 0 5px;color:var(--deep)}.card p{margin:0;color:var(--muted);font-size:14px}.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.fact{background:var(--light);border-radius:12px;padding:17px}.fact small{display:block;color:var(--muted)}.fact b{font-size:18px;color:var(--deep)}
+.constitution{background:white;border:1px solid var(--line);border-radius:15px;padding:26px}.constitution h3{color:var(--green);margin-bottom:4px}.constitution p{margin-top:5px}.constitution ol{padding-left:22px}.constitution li{margin:6px 0}
+.mapbox{background:#eaf3ec;border:1px solid var(--line);border-radius:15px;padding:22px}.roommap{display:grid;grid-template-columns:1.2fr .8fr;grid-template-rows:100px 120px;gap:10px;max-width:620px;margin:15px auto}.zone{border:2px dashed #80a88d;border-radius:12px;display:grid;place-items:center;text-align:center;background:#fff;color:var(--deep);font-weight:700;padding:10px}.zone small{display:block;font-weight:400;color:var(--muted)}.zone.table{grid-row:span 2;background:#dff0e4}.notice{border-left:4px solid var(--gold);padding:12px 16px;background:#fff9e9;border-radius:0 9px 9px 0;color:#69572c;font-size:14px}
+footer{background:#103f2a;color:#e4f1e8;padding:30px 6%;text-align:center}footer p{margin:5px;font-size:13px;color:#c3d8c9}
+@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}nav{gap:12px}.hero-inner{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.facts{grid-template-columns:repeat(2,1fr)}.hero{padding-top:48px}.roommap{grid-template-rows:90px 110px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <div class="brand"><span class="mini-flag" aria-hidden="true"></span><span>РЕСПУБЛИКА КАКТУСИЯ</span></div>
+    <nav aria-label="Главная навигация">
+      <a href="#about">О государстве</a><a href="#government">Правительство</a><a href="#territory">Территория</a><a href="#law">Конституция</a><a href="#currency">Валюта</a>
+    </nav>
+  </div>
+</header>
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">Официальный информационный портал микронации</div>
+      <h1>Республика<br>Кактусия</h1>
+      <p>Маленькая территория — большие возможности. Пространство для творчества, собственных традиций, законов и дружбы.</p>
+      <div class="actions"><a class="btn" href="#about">Изучить государство</a><a class="btn alt" href="#law">Читать конституцию</a></div>
+    </div>
+    <div class="flag-card">
+      <div class="flag" role="img" aria-label="Зелёно-белый флаг с символом кактуса"><div class="white">🌵</div><div class="green"></div></div>
+      <strong>ФЛАГ РЕСПУБЛИКИ КАКТУСИЯ</strong>
+    </div>
+  </div>
+</section>
+<main>
+  <section class="section" id="about">
+    <h2>О государстве</h2><p class="lead">Основные сведения о нашей микронации.</p>
+    <div class="facts">
+      <div class="fact"><small>Дата основания</small><b>1 ноября 2026</b></div>
+      <div class="fact"><small>Форма управления</small><b>Президентская республика</b></div>
+      <div class="fact"><small>Национальная валюта</small><b>Кактус (KCT)</b></div>
+      <div class="fact"><small>Государственный язык</small><b>Русский</b></div>
+    </div>
+    <div class="notice" style="margin-top:18px">Кактусия — частная игровая и творческая микронация. Она не является признанным государством, а её территория остаётся частью страны, в которой физически находится.</div>
+  </section>
+  <section class="section" id="government">
+    <h2>Государственное устройство</h2><p class="lead">Органы управления и общественные направления.</p>
+    <div class="grid">
+      <article class="card"><div class="icon">🏛️</div><h3>Президент</h3><p>Глава микронации. Представляет Кактусию, утверждает внутренние правила и инициативы.</p></article>
+      <article class="card"><div class="icon">📚</div><h3>Канцелярия</h3><p>Ведёт архив документов, хранит редакции конституции и записи важных событий.</p></article>
+      <article class="card"><div class="icon">🎨</div><h3>Министерство культуры</h3><p>Отвечает за символику, праздники, музыку, традиции и творческие проекты.</p></article>
+    </div>
+  </section>
+  <section class="section" id="territory">
+    <h2>Территория и столица</h2><p class="lead">Схематическая карта внутреннего пространства Кактусии.</p>
+    <div class="mapbox">
+      <div class="roommap">
+        <div class="zone table">🏛️ Столица<small>Административный центр — стол</small></div>
+        <div class="zone">🏡 Жилой район<small>Кровать</small></div>
+        <div class="zone">🏛️ Архив и музей<small>Полка или шкаф</small></div>
+      </div>
+      <p style="text-align:center;color:#607568;font-size:13px">Схема условная. Границы обозначаются только внутри согласованного личного пространства.</p>
+    </div>
+  </section>
+  <section class="section" id="law">
+    <h2>Конституция</h2><p class="lead">Основной внутренний документ Республики Кактусия.</p>
+    <div class="constitution">
+      <h3>Преамбула</h3><p>Мы, участники Республики Кактусия, учреждаем эту микронацию как мирный творческий проект, основанный на уважении, порядке и сотрудничестве.</p>
+      <h3>Статья 1. Основы</h3><ol><li>Кактусия является игровой и творческой микронацией.</li><li>Её символы и правила действуют в рамках проекта.</li><li>Микронация не претендует на юридический суверенитет или чужую собственность.</li></ol>
+      <h3>Статья 2. Президент</h3><ol><li>Президент координирует деятельность микронации.</li><li>Президент следит за соблюдением Конституции.</li><li>Решения, затрагивающие других людей, принимаются с их согласия.</li></ol>
+      <h3>Статья 3. Граждане</h3><ol><li>Участие добровольное.</li><li>Каждый участник может предлагать идеи и поправки.</li><li>Все участники уважают личные границы и имущество друг друга.</li></ol>
+      <h3>Статья 4. Экономика</h3><ol><li>Внутренняя расчётная единица называется «Кактус» (KCT).</li><li>Банкноты и монеты используются только в игре и не являются законным платёжным средством.</li></ol>
+      <h3>Статья 5. Территория</h3><ol><li>Схема территории является условной.</li><li>Нельзя ограничивать проход, менять замки или присваивать общие помещения.</li><li>Любые обозначения размещаются только с разрешения владельца жилья.</li></ol>
+      <h3>Статья 6. Изменения</h3><ol><li>Поправки публикуются в государственном архиве.</li><li>Конституция действует с даты основания микронации.</li></ol>
+    </div>
+  </section>
+  <section class="section" id="currency">
+    <h2>Национальная валюта</h2><p class="lead">Внутренняя игровая валюта Кактусии.</p>
+    <div class="grid">
+      <article class="card"><div class="icon">🌵</div><h3>1 Кактус</h3><p>Одна единица внутреннего игрового счёта.</p></article>
+      <article class="card"><div class="icon">💵</div><h3>10 Кактусов</h3><p>Условная банкнота для настольной экономики.</p></article>
+      <article class="card"><div class="icon">🏦</div><h3>Государственная казна</h3><p>Ведёт учёт игровых доходов и расходов.</p></article>
+    </div>
+  </section>
+  <section class="section" id="documents">
+    <h2>Государственные документы</h2><p class="lead">Реестр документов микронации.</p>
+    <div class="grid">
+      <article class="card"><div class="icon">📜</div><h3>Конституция</h3><p>Основной закон и принципы проекта.</p></article>
+      <article class="card"><div class="icon">🪪</div><h3>Свидетельство участника</h3><p>Внутренний сувенирный документ. Не удостоверение личности.</p></article>
+      <article class="card"><div class="icon">🏅</div><h3>Государственные награды</h3><p>Памятные награды за вклад в развитие Кактусии.</p></article>
+    </div>
+  </section>
+</main>
+<footer>
+  <strong>🌵 Республика Кактусия</strong>
+  <p>Маленькая территория — большие возможности.</p>
+  <p>Частная творческая микронация. Не является официальным государственным органом.</p>
+  <p>© 2026 Республика Кактусия</p>
+</footer>
+</body>
+</html>
